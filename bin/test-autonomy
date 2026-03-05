@@ -1,0 +1,71 @@
+#!/bin/bash
+# test-autonomy - Executa o teste de autonomia do Viajante
+# Missão Zero: Protocolo de Autenticação de Autonomia
+
+set -e  # Exit on error
+
+echo "🛡️  Missão Zero: Protocolo de Autenticação de Autonomia"
+printf '=%.0s' {1..70}; echo ""
+echo ""
+
+# Cores para output
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Verificar se estamos no diretório raiz do projeto
+if [ ! -f "tests/mission_zero_autonomy.py" ]; then
+    echo -e "${RED}❌ Erro: Execute este script do diretório raiz do projeto${NC}"
+    exit 1
+fi
+
+# Verificar dependências Python
+echo "Verificando dependências..."
+python -c "import pyautogui" 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo -e "${YELLOW}⚠️  pyautogui não encontrado. Instalando...${NC}"
+    pip install pyautogui
+fi
+
+echo -e "${GREEN}✓ Dependências verificadas${NC}"
+echo ""
+
+# Criar diretórios necessários
+mkdir -p temp
+mkdir -p logs
+
+# Executar missão
+echo "Executando teste de autonomia..."
+echo "Logs serão salvos em: logs/mission_zero.log"
+echo ""
+
+python tests/mission_zero_autonomy.py --verbose
+
+# Capturar código de saída
+EXIT_CODE=$?
+
+echo ""
+
+# Verificar resultado
+if [ $EXIT_CODE -eq 0 ]; then
+    printf "${GREEN}"; printf '=%.0s' {1..70}; echo "${NC}"
+    echo -e "${GREEN}✅ Missão Zero completa com sucesso!${NC}"
+    printf "${GREEN}"; printf '=%.0s' {1..70}; echo "${NC}"
+    echo ""
+    echo "O Viajante provou sua autonomia."
+    echo ""
+    echo "📁 Arquivos gerados:"
+    echo "   Logs: logs/mission_zero.log"
+    echo "   Screenshots: temp/mission_zero_*.png"
+    echo ""
+    exit 0
+else
+    printf "${RED}"; printf '=%.0s' {1..70}; echo "${NC}"
+    echo -e "${RED}❌ Missão Zero falhou${NC}"
+    printf "${RED}"; printf '=%.0s' {1..70}; echo "${NC}"
+    echo ""
+    echo "🔍 Revisar logs em: logs/mission_zero.log"
+    echo ""
+    exit 1
+fi

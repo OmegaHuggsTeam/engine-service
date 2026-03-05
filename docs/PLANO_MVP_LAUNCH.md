@@ -1,0 +1,285 @@
+# MVP GitHub Launch — Agent Training Platform
+
+**Plano detalhado para implementação.** Use este documento como base para análise do Claude e commits semânticos.
+
+---
+
+## Context
+
+The audit is complete (45 files created, 924 tests pass). Now the user wants to:
+
+1. Push to GitHub with semantic commits mapping 5 years of evolution into 5 months
+2. CI/CD that runs tests automatically like a team evaluating code
+3. MVP platform for friends to create/train/evaluate their own agents
+4. SonarQube integration
+5. HOW-TO-PROMPT guide with statistical reasoning from multi-tool benchmarks
+6. Onboarding docs for friends
+
+Cursor generated `docs/PLANO_MVP_GITHUB_5MESES.md` but user found it "muito raso" (too shallow). This plan provides the granularity needed.
+
+**Critical risk**: Project has sensitive data. `.env` has real secrets. `data/` is 25GB. `.temp_profile/` is 146MB. All must be gitignored BEFORE any `git add`.
+
+---
+
+## Phase 0: Pre-GitHub Foundation (Do First)
+
+### 0.1 Create .gitignore (CRITICAL — must exist before git init)
+
+**File**: `.gitignore`
+
+**Must exclude**: `.env`, `data/raw/` (25GB), `data/processed/`, `data/chunks/`, `data/workflows/`, `data/generated_workflows/`, `.temp_profile/` (146MB), `frontend/.next/` (173MB), `frontend/node_modules/`, `.venv/`, `__pycache__/`, `*.mcr` (1.4MB binaries), `logs/`, `temp/`, `db/chroma/`, `.hypothesis/`, `.pytest_cache/`, `.mypy_cache/`, `htmlcov/`, `coverage.xml`, `.coverage`, `.run_init_state`, `system_heartbeat.json`, `macros/`, `superpowers/`, `.kiro/`, `.cursor/`, `.claude/`, `Thumbs.db`, `.DS_Store`
+
+**Must NOT exclude**: `.env.example`, `db/chroma/.gitkeep`
+
+### 0.2 Create pyproject.toml
+
+Tool configs for: pytest (testpaths, markers, asyncio_mode), black (line-length=100), mypy (ignore_missing_imports), ruff (select E/F/W/I), coverage (source=src, fail_under=50)
+
+### 0.3 Create sonar-project.properties
+
+Key: `bunker-intelligence`, sources: `src`, `automation_hub`, `frontend/src`, exclusions: `node_modules`, `.venv`, `db`, `data`, coverage: `coverage.xml`
+
+### 0.4 Create Makefile
+
+Targets: `install`, `install-dev`, `init`, `test`, `test-fast`, `test-cov`, `lint`, `format`, `check`, `docker-up`, `docker-down`, `gateway`, `webhook`, `clean`, `validate`, `benchmark`
+
+### 0.5 Create conftest.py (root)
+
+Shared fixtures: `_env_defaults` (autouse, sets safe test env vars), `mock_graph_manager`, `mock_llm_client`
+
+### 0.6 Create CODE_OF_CONDUCT.md
+
+Contributor Covenant v2.1
+
+---
+
+## Phase 1: CI/CD Workflows
+
+### 1.1 .github/workflows/ci-tests.yml
+
+- Trigger: push/PR to `main`, `develop`, `release/**`
+- Matrix: Python 3.11, 3.12
+- Steps: checkout, setup-python (with pip cache), install deps, ruff+black lint, pytest with coverage (xml+terminal), upload coverage to Codecov
+- Ignores known-failing `test_telegram_command_handler.py`
+- Concurrency: cancel-in-progress per branch
+
+### 1.2 .github/workflows/ci-sonar.yml
+
+- Trigger: push/PR to `main`, `develop`
+- Steps: checkout (fetch-depth=0 for blame), pytest with coverage, SonarCloud scan
+- Requires: `SONAR_TOKEN` secret
+
+### 1.3 .github/workflows/ci-frontend.yml
+
+- Trigger: push/PR to `main`, `develop` (only `frontend/**` paths)
+- Steps: checkout, setup-node 20, npm ci, tsc --noEmit, npm run build
+
+### 1.4 .github/workflows/ci-bootstrap.yml
+
+- Trigger: push/PR on `run_init.py`, `requirements*.txt` changes
+- Steps: cp .env.example .env, validate imports (core, gateway, agent_factory), basic run_init parsing
+
+### 1.5 .github/dependabot.yml
+
+- pip: weekly, monday, 5 PR limit
+- npm: weekly, monday, 5 PR limit
+- github-actions: monthly
+
+---
+
+## Phase 2: HOW-TO-PROMPT Guide
+
+**File**: `docs/guides/HOW_TO_PROMPT.md`
+
+### Section 1: Statistical Evidence
+
+Our multi-tool benchmark data:
+
+| Tool         | Structured Prompt Score | Vague Prompt Score | Delta |
+|--------------|--------------------------|--------------------|-------|
+| Cursor       | 91/100 (Frontend AI)     | ~55/100 (MVP Plan) | +36   |
+| Kiro         | 92/100 (Agent Upgrade)   | N/A                | —     |
+| Anti Gravity | 97/100 (UX Polish)       | N/A                | —     |
+
+**Key insight**: Same tool (Cursor), 36-point swing from prompt quality alone.
+
+### Section 2: The "Muito Raso" Anti-Pattern
+
+Case study: `PLANO_MVP_GITHUB_5MESES.md`
+
+- What was asked: vague "create a plan"
+- What was delivered: table of workflow names, no actual YAML/config
+- Root cause: prompt lacked output format, granularity, success criteria, negative examples
+
+### Section 3: 5 Prompt Patterns
+
+1. **Contextual Loading** — front-load relevant code/context
+2. **Spec-Driven Generation** — write acceptance criteria first (Kiro pattern)
+3. **Scoring-Rubric Constrained** — tell LLM how output will be scored (Correto 40% + Completo 30% + Qualidade 30%)
+4. **Template-Constrained** — provide output template to fill (TEMPLATE.md pattern)
+5. **Pipeline-Decomposed** — break complex tasks into layers (5-layer pipeline pattern)
+
+### Section 4: ROI Per Token
+
+- Layer 0 cache = 0 tokens (requires well-structured queries)
+- Layer 1 triage = 8B model (~$0.00001/query)
+- Well-prompted queries hit Layer 0/1 ~50% of time
+- Poorly prompted queries always go to Layer 3 (full 70B eval)
+- At 1000 queries/day: $0.10 vs $1.00
+
+### Section 5: Agent-Specific Templates
+
+Concrete prompt templates for domain, specialist, operator agents
+
+### Section 6: Benchmarking
+
+How to use `tools/benchmark_pipeline.py` to measure prompt effectiveness
+
+---
+
+## Phase 3: Onboarding & Training Docs
+
+### 3.1 docs/guides/ONBOARDING.md
+
+1. What is Bunker Intelligence? (3-paragraph overview)
+2. Prerequisites checklist (Python 3.11+, Docker, Git, free Groq API key)
+3. Step-by-step setup (clone, venv, install, run_init.py, docker compose up)
+4. Verify everything works (health check, list agents, test query)
+5. First agent interaction (gateway query, read response)
+6. Create your first custom agent (fork TEMPLATE.md, register, write tests, submit PR)
+7. Understanding the score (Correto/Completo/Qualidade)
+8. Getting help (Issues, discussions)
+
+### 3.2 docs/guides/COMO_TREINAR_AGENTES.md
+
+1. O que é um Agente (taxonomy)
+2. Anatomia: AGENT_REGISTRY entry, class, execute() method
+3. 5 init patterns (expanded tutorials)
+4. Criando do Zero (7-step tutorial with exact file paths)
+5. Adicionando Knowledge (ChromaDB chunks, Neo4j concepts)
+6. Armadilhas Comuns (5 pitfalls with solutions)
+
+### 3.3 docs/guides/COMO_AVALIAR_RESPOSTAS.md
+
+1. The Formula (Correto 40% + Completo 30% + Qualidade 30%)
+2. Detailed rubric per dimension
+3. 3 scored examples with commentary
+4. Automatic evaluation (QualityGate, success_rate, FeedbackLoop)
+5. Manual evaluation (ToolScorecard)
+6. Iterative improvement workflow
+
+### 3.4 Update README.md
+
+- Badges (CI, coverage, SonarCloud, Python, License)
+- One-liner description
+- ASCII architecture diagram
+- Quick Start link
+- Features bullet list
+- Contributor/New User links
+- License
+
+---
+
+## Phase 4: Semantic Commit Strategy
+
+14 commits on `develop` branch, each mapping to a project subsystem:
+
+| # | Message | Content | Tag |
+|---|---------|---------|-----|
+| 1 | chore(init): bootstrap project config | .gitignore, pyproject.toml, Makefile, conftest.py, sonar-project.properties, CODE_OF_CONDUCT | v0.0.1 |
+| 2 | feat(core): add chunk extraction and RAG pipeline | src/rag/, src/processors/, src/extractors/, src/utils/, requirements*.txt, run_init.py | |
+| 3 | feat(agents): add 29 specialized agents | src/agents/, src/neural_link/agents/, src/neural_link/orchestrator/ | v0.0.2 |
+| 4 | feat(graph): add Neo4j graph layer with schema | src/neural_link/graph/, src/neural_link/rag/ | |
+| 5 | feat(pipeline): add 5-layer optimization | pipeline_cache, quality_gate, model_tier, decision_tree, feedback, cost_context | v0.0.3 |
+| 6 | feat(api): add Sovereign Gateway (47 REST + 5 WS) | src/neural_link/api/, automation_hub/ | |
+| 7 | feat(telemetry): add metrics and cost tracking | src/neural_link/telemetry/, src/neural_link/services/, src/middleware/ | |
+| 8 | feat(crm): add self-sovereign CRM | CRM-specific in api/, agents/, graph/ | v0.0.4 |
+| 9 | feat(infra): add Docker, K8s manifests | docker-compose.yml, Dockerfile, infra/ | |
+| 10 | feat(frontend): add Next.js dashboard | frontend/ (src only) | |
+| 11 | test: add 924 tests | tests/, src/neural_link/tests/ | v0.0.5 |
+| 12 | docs: add specs, audits, and guides | docs/, CONTRIBUTING.md, README.md, .env.example | |
+| 13 | ci: add GitHub Actions and Dependabot | .github/ | |
+| 14 | docs(guides): add HOW_TO_PROMPT and onboarding | New guides from Phase 2 & 3 | |
+
+### Alteração em commit 7
+
+- Original: "feat(telemetry): add KPI metrics and cost tracking"
+- Ajustado para: "feat(telemetry): add metrics and cost tracking" (termo genérico)
+
+---
+
+## Phase 5: Merge to main & v0.1.0
+
+```bash
+# After all CI passes on develop:
+git checkout -b release/v0.1.0
+# Final validation: make check && make validate
+git checkout -b main
+git merge --no-ff release/v0.1.0
+git tag -a v0.1.0 -m "MVP: Agent training platform"
+git push origin main --tags
+git push origin develop
+# Configure branch protection (require CI + PR review on main)
+```
+
+---
+
+## Files to Create (Summary)
+
+| File | Phase |
+|------|-------|
+| .gitignore | 0.1 |
+| pyproject.toml | 0.2 |
+| sonar-project.properties | 0.3 |
+| Makefile | 0.4 |
+| conftest.py | 0.5 |
+| CODE_OF_CONDUCT.md | 0.6 |
+| .github/workflows/ci-tests.yml | 1.1 |
+| .github/workflows/ci-sonar.yml | 1.2 |
+| .github/workflows/ci-frontend.yml | 1.3 |
+| .github/workflows/ci-bootstrap.yml | 1.4 |
+| .github/dependabot.yml | 1.5 |
+| docs/guides/HOW_TO_PROMPT.md | 2 |
+| docs/guides/ONBOARDING.md | 3.1 |
+| docs/guides/COMO_TREINAR_AGENTES.md | 3.2 |
+| docs/guides/COMO_AVALIAR_RESPOSTAS.md | 3.3 |
+| README.md (rewrite) | 3.4 |
+
+**Total**: 16 files to create/rewrite, 14 semantic commits, 6 tags
+
+---
+
+## Verification
+
+**After Phase 0:**
+```bash
+git status   # .env should NOT appear
+du -sh .git/ # Should be < 50MB
+```
+
+**After Phase 1 (on GitHub):**
+```bash
+gh run list   # All 4 workflows should be visible
+gh run watch  # Wait for green
+```
+
+**After Phase 5:**
+```bash
+gh release view v0.1.0
+curl http://localhost:8766/api/v1/cluster/health
+make test     # 924+ tests pass locally
+```
+
+---
+
+## Risk Mitigation
+
+1. **Secret leak**: .gitignore committed FIRST (commit 1), before any source code
+2. **25GB data/**: Excluded by .gitignore; verify with `git status` after each staging
+3. **146MB Chrome profile**: Excluded by `.temp_profile/` pattern
+4. **Binary macros**: `*.mcr` excluded
+5. **CI failures**: conftest.py sets safe defaults; known Telegram test excluded
+
+---
+
+**Próximo passo**: Claude analisa este plano e executa fase por fase, gerando commits semânticos conforme a tabela da Phase 4.

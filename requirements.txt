@@ -1,0 +1,99 @@
+# Requirements - Dependências do projeto
+# Instalação: pip install -r requirements.txt
+
+# ============================================
+# Core Dependencies - Essenciais
+# ============================================
+
+# Controle de mouse e teclado
+pyautogui==0.9.54
+
+# Processamento de imagens
+Pillow==10.2.0
+opencv-python==4.9.0.80
+numpy==1.26.3
+
+# Async/await support
+asyncio==3.4.3
+
+# HTTP client assíncrono
+httpx==0.26.0
+
+# YAML parsing para configurações
+PyYAML==6.0.1
+
+# ============================================
+# Testing - Testes
+# ============================================
+
+# Framework de testes
+pytest==7.4.4
+pytest-asyncio==0.23.3
+
+# Property-based testing
+hypothesis==6.98.3
+
+# Code coverage
+pytest-cov==4.1.0
+
+# ============================================
+# Optional - Opcionais
+# ============================================
+
+# Neo4j driver (se usar banco de grafos)
+neo4j==5.16.0
+
+# Kubernetes Python client for cluster monitoring
+kubernetes==29.0.0
+
+# Rich library for terminal formatting and Telegram messages
+rich==13.7.0
+
+# FastAPI para webhook listener
+fastapi==0.109.0
+uvicorn==0.27.0
+
+# Pydantic para validação de dados
+pydantic==2.5.3
+
+# Process monitoring para stress tests
+psutil==5.9.8
+
+# ============================================
+# Development - Desenvolvimento
+# ============================================
+
+# Type checking
+mypy==1.8.0
+
+# Code formatting
+black==24.1.1
+
+# Linting
+flake8==7.0.0
+
+# ============================================
+# Platform Specific - Específico de Plataforma
+# ============================================
+
+# Windows-specific
+pywin32==306; sys_platform == 'win32'
+
+# ============================================
+# Notas de Instalação
+# ============================================
+
+# Para instalar apenas dependências essenciais:
+#   pip install pyautogui Pillow asyncio httpx PyYAML
+
+# Para instalar tudo incluindo desenvolvimento:
+#   pip install -r requirements.txt
+
+# Para atualizar todas as dependências:
+#   pip install --upgrade -r requirements.txt
+
+# Para criar ambiente virtual:
+#   python -m venv .venv
+#   source .venv/bin/activate  # Linux/Mac
+#   .venv\Scripts\activate     # Windows
+#   pip install -r requirements.txt

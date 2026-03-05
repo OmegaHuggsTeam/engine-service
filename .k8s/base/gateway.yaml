@@ -1,0 +1,174 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: bunker
+  labels:
+    app.kubernetes.io/name: gateway
+  annotations:
+    tailscale.com/hostname: bunker-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway
+    spec:
+      initContainers:
+        - name: wait-chroma
+          image: curlimages/curl:latest
+          command:
+            - sh
+            - -c
+            - |
+              until curl -sf http://chroma:8000/api/v2/heartbeat; do echo "waiting chroma..."; sleep 2; done
+        - name: wait-neo4j
+          image: curlimages/curl:latest
+          command:
+            - sh
+            - -c
+            - |
+              until curl -sf http://neo4j:7474; do echo "waiting neo4j..."; sleep 2; done
+      containers:
+        - name: gateway
+          image: mcp-engine-service-app:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -m
+            - uvicorn
+            - src.neural_link.api.sovereign_gateway:app
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8766"
+          ports:
+            - containerPort: 8766
+              name: http
+          env:
+            - name: CHROMA_HOST
+              value: chroma
+            - name: CHROMA_PORT
+              value: "8000"
+            - name: NEO4J_URI
+              value: bolt://neo4j:7687
+            - name: NEO4J_USER
+              valueFrom:
+                secretKeyRef:
+                  name: neo4j-auth
+                  key: NEO4J_USER
+            - name: NEO4J_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: neo4j-auth
+                  key: NEO4J_PASSWORD
+            - name: EVIDENCE_SERVER_HOST
+              value: evidence
+            - name: EVIDENCE_SERVER_PORT
+              value: "5000"
+            - name: PYTHONPATH
+              value: /app
+            - name: TELEGRAM_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: TELEGRAM_BOT_TOKEN
+                  optional: true
+            - name: AUTHORIZED_CHAT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AUTHORIZED_CHAT_ID
+                  optional: true
+            - name: N8N_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: N8N_API_KEY
+                  optional: true
+            - name: N8N_API_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: N8N_API_URL
+                  optional: true
+            - name: N8N_HOST
+              value: "n8n"
+            - name: N8N_WEBHOOK_URL
+              value: "http://n8n:5678/webhook/k8s-pod-failure"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /api/v1/cluster/health
+              port: 8766
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/v1/cluster/health
+              port: 8766
+            initialDelaySeconds: 15
+            periodSeconds: 10
+        # Tailscale Sidecar - bunker-gateway.tailscale.net
+        - name: tailscale
+          image: tailscale/tailscale:v1.64.1
+          env:
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: tailscale-auth
+                  key: TS_AUTHKEY
+            - name: TS_EXTRA_ARGS
+              value: "--accept-routes=false --advertise-exit-node=false --hostname=bunker-gateway --reset"
+            - name: TS_USERSPACE
+              value: "false"
+            - name: TS_ACCEPT_DNS
+              value: "false"
+            - name: TS_KUBE_SECRET
+              value: ""
+            - name: TS_STATE_DIR
+              value: /var/lib/tailscale
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          volumeMounts:
+            - name: dev-tun
+              mountPath: /dev/net/tun
+            - name: ts-state
+              mountPath: /var/lib/tailscale
+      volumes:
+        - name: ts-state
+          emptyDir: {}
+        - name: dev-tun
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: bunker
+  labels:
+    app.kubernetes.io/name: gateway
+spec:
+  selector:
+    app.kubernetes.io/name: gateway
+  ports:
+    - name: http
+      port: 8766
+      targetPort: 8766
+  type: ClusterIP

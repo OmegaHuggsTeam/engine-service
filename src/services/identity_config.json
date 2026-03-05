@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "identity_name": "energy_alias",
+  "providers": [
+    {
+      "provider": "google",
+      "enabled": true,
+      "base_url": "http://localhost:9090/mock/google",
+      "form_fields": {"email": "", "display_name": ""},
+      "steps": [
+        {"step": "navigate", "selector": "#login-form", "timeout_ms": 5000},
+        {"step": "fill_form", "selector": "#email-input", "value_field": "email"},
+        {"step": "submit", "selector": "#submit-btn"},
+        {"step": "verify", "selector": ".success-msg"}
+      ]
+    },
+    {
+      "provider": "github",
+      "enabled": true,
+      "base_url": "http://localhost:9090/mock/github",
+      "form_fields": {"username": "", "email": ""},
+      "steps": [
+        {"step": "navigate", "selector": "#signup-form", "timeout_ms": 5000},
+        {"step": "fill_form", "selector": "#username-input", "value_field": "username"},
+        {"step": "fill_form", "selector": "#email-input", "value_field": "email"},
+        {"step": "submit", "selector": "#create-account-btn"},
+        {"step": "verify", "selector": ".welcome-msg"}
+      ]
+    },
+    {
+      "provider": "groq",
+      "enabled": true,
+      "base_url": "http://localhost:9090/mock/groq",
+      "form_fields": {"api_key_name": ""},
+      "steps": [
+        {"step": "navigate", "selector": "#api-keys", "timeout_ms": 5000},
+        {"step": "extract_key", "selector": "#new-key-value"},
+        {"step": "store_key", "selector": null, "value_field": "api_key"}
+      ]
+    }
+  ]
+}

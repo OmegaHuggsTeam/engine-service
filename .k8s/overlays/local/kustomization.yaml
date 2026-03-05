@@ -1,0 +1,420 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: bunker
+
+resources:
+  - ../../base
+
+patches:
+  # Disable K8s service-link env vars (CHROMA_PORT=tcp://... breaks ChromaDB/Neo4j config)
+  - target:
+      kind: Deployment
+    patch: |
+      - op: add
+        path: /spec/template/spec/enableServiceLinks
+        value: false
+
+  # Remove Tailscale sidecars + volumes for local Docker Desktop deploy
+  - target:
+      kind: Deployment
+      name: app
+    patch: |
+      - op: remove
+        path: /spec/template/spec/initContainers
+      - op: replace
+        path: /spec/template/spec/containers
+        value:
+          - name: app
+            image: mcp-engine-service-app:latest
+            imagePullPolicy: IfNotPresent
+            command: ["python", "-m", "src.neural_link.telemetry.telegram_command_handler"]
+            env:
+              - name: CHROMA_HOST
+                value: chroma
+              - name: CHROMA_PORT
+                value: "8000"
+              - name: NEO4J_URI
+                value: bolt://neo4j:7687
+              - name: NEO4J_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: neo4j-auth
+                    key: NEO4J_USER
+              - name: NEO4J_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: neo4j-auth
+                    key: NEO4J_PASSWORD
+              - name: EVIDENCE_SERVER_HOST
+                value: evidence
+              - name: EVIDENCE_SERVER_PORT
+                value: "5000"
+              - name: EVIDENCE_DIR
+                value: /app/temp/evidence
+              - name: PYTHONPATH
+                value: /app
+              - name: TELEGRAM_BOT_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: app-secrets
+                    key: TELEGRAM_BOT_TOKEN
+                    optional: true
+              - name: N8N_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: app-secrets
+                    key: N8N_API_KEY
+                    optional: true
+              - name: N8N_API_URL
+                valueFrom:
+                  secretKeyRef:
+                    name: app-secrets
+                    key: N8N_API_URL
+                    optional: true
+            volumeMounts:
+              - name: evidence-data
+                mountPath: /app/temp/evidence
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "250m"
+              limits:
+                memory: "2Gi"
+                cpu: "1000m"
+            livenessProbe:
+              exec:
+                command:
+                  - python
+                  - -c
+                  - |
+                    import os, sys, httpx
+                    h = os.getenv('CHROMA_HOST', 'chroma')
+                    p = os.getenv('CHROMA_PORT', '8000')
+                    r = httpx.get(f'http://{h}:{p}/api/v2/heartbeat', timeout=5)
+                    sys.exit(0 if r.status_code == 200 else 1)
+              initialDelaySeconds: 30
+              periodSeconds: 30
+              timeoutSeconds: 10
+      - op: replace
+        path: /spec/template/spec/volumes
+        value:
+          - name: evidence-data
+            persistentVolumeClaim:
+              claimName: evidence-data
+
+  - target:
+      kind: Deployment
+      name: gateway
+    patch: |
+      - op: remove
+        path: /spec/template/spec/initContainers
+      - op: replace
+        path: /spec/template/spec/containers
+        value:
+          - name: gateway
+            image: mcp-engine-service-app:latest
+            imagePullPolicy: IfNotPresent
+            command: ["python", "-m", "uvicorn", "src.neural_link.api.sovereign_gateway:app", "--host", "0.0.0.0", "--port", "8766"]
+            ports:
+              - containerPort: 8766
+                name: http
+            env:
+              - name: CHROMA_HOST
+                value: chroma
+              - name: CHROMA_PORT
+                value: "8000"
+              - name: NEO4J_URI
+                value: bolt://neo4j:7687
+              - name: NEO4J_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: neo4j-auth
+                    key: NEO4J_USER
+              - name: NEO4J_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: neo4j-auth
+                    key: NEO4J_PASSWORD
+              - name: EVIDENCE_SERVER_HOST
+                value: evidence
+              - name: EVIDENCE_SERVER_PORT
+                value: "5000"
+              - name: PYTHONPATH
+                value: /app
+              - name: TELEGRAM_BOT_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: app-secrets
+                    key: TELEGRAM_BOT_TOKEN
+                    optional: true
+              - name: AUTHORIZED_CHAT_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: app-secrets
+                    key: AUTHORIZED_CHAT_ID
+                    optional: true
+              - name: N8N_HOST
+                value: "n8n"
+              - name: N8N_WEBHOOK_URL
+                value: "http://n8n:5678/webhook/k8s-pod-failure"
+              - name: N8N_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: app-secrets
+                    key: N8N_API_KEY
+                    optional: true
+              - name: N8N_API_URL
+                valueFrom:
+                  secretKeyRef:
+                    name: app-secrets
+                    key: N8N_API_URL
+                    optional: true
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "250m"
+              limits:
+                memory: "2Gi"
+                cpu: "1000m"
+            livenessProbe:
+              httpGet:
+                path: /api/v1/cluster/health
+                port: 8766
+              initialDelaySeconds: 30
+              periodSeconds: 30
+              timeoutSeconds: 10
+            readinessProbe:
+              httpGet:
+                path: /api/v1/cluster/health
+                port: 8766
+              initialDelaySeconds: 15
+              periodSeconds: 10
+      - op: replace
+        path: /spec/template/spec/volumes
+        value: []
+
+  - target:
+      kind: Deployment
+      name: neo4j
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers
+        value:
+          - name: neo4j
+            image: neo4j:5-community
+            ports:
+              - containerPort: 7474
+                name: http
+              - containerPort: 7687
+                name: bolt
+            env:
+              - name: NEO4J_AUTH
+                valueFrom:
+                  secretKeyRef:
+                    name: neo4j-auth
+                    key: NEO4J_AUTH
+              - name: NEO4J_PLUGINS
+                value: '["apoc"]'
+            volumeMounts:
+              - name: neo4j-data
+                mountPath: /data
+            resources:
+              requests:
+                memory: "1Gi"
+                cpu: "500m"
+              limits:
+                memory: "4Gi"
+                cpu: "2000m"
+            livenessProbe:
+              exec:
+                command: ["wget", "-q", "--spider", "http://localhost:7474"]
+              initialDelaySeconds: 30
+              periodSeconds: 10
+              timeoutSeconds: 5
+            readinessProbe:
+              exec:
+                command: ["wget", "-q", "--spider", "http://localhost:7474"]
+              initialDelaySeconds: 20
+              periodSeconds: 5
+      - op: replace
+        path: /spec/template/spec/volumes
+        value:
+          - name: neo4j-data
+            persistentVolumeClaim:
+              claimName: neo4j-data
+
+  - target:
+      kind: Deployment
+      name: chroma
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers
+        value:
+          - name: chroma
+            image: chromadb/chroma:latest
+            ports:
+              - containerPort: 8000
+            env:
+              - name: IS_PERSISTENT
+                value: "TRUE"
+              - name: PERSIST_DIRECTORY
+                value: /data
+              - name: ANONYMIZED_TELEMETRY
+                value: "FALSE"
+            volumeMounts:
+              - name: chroma-data
+                mountPath: /data
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "250m"
+              limits:
+                memory: "2Gi"
+                cpu: "1000m"
+            livenessProbe:
+              httpGet:
+                path: /api/v2/heartbeat
+                port: 8000
+              initialDelaySeconds: 15
+              periodSeconds: 10
+              timeoutSeconds: 5
+            readinessProbe:
+              httpGet:
+                path: /api/v2/heartbeat
+                port: 8000
+              initialDelaySeconds: 10
+              periodSeconds: 5
+      - op: replace
+        path: /spec/template/spec/volumes
+        value:
+          - name: chroma-data
+            persistentVolumeClaim:
+              claimName: chroma-data
+
+  - target:
+      kind: Deployment
+      name: evidence-server
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers
+        value:
+          - name: evidence
+            image: mcp-engine-service-app:latest
+            imagePullPolicy: IfNotPresent
+            command: ["python", "-m", "uvicorn", "src.neural_link.services.evidence_server:app", "--host", "0.0.0.0", "--port", "5000"]
+            ports:
+              - containerPort: 5000
+            env:
+              - name: EVIDENCE_DIR
+                value: /app/temp/evidence
+              - name: EVIDENCE_SERVER_HOST
+                value: "0.0.0.0"
+              - name: PYTHONPATH
+                value: /app
+            volumeMounts:
+              - name: evidence-data
+                mountPath: /app/temp/evidence
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+            livenessProbe:
+              httpGet:
+                path: /health
+                port: 5000
+              initialDelaySeconds: 10
+              periodSeconds: 10
+            readinessProbe:
+              httpGet:
+                path: /health
+                port: 5000
+              initialDelaySeconds: 5
+              periodSeconds: 5
+      - op: replace
+        path: /spec/template/spec/volumes
+        value:
+          - name: evidence-data
+            persistentVolumeClaim:
+              claimName: evidence-data
+
+  # n8n — strip Tailscale sidecar for Docker Desktop
+  - target:
+      kind: Deployment
+      name: n8n
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers
+        value:
+          - name: n8n
+            image: n8nio/n8n:latest
+            ports:
+              - containerPort: 5678
+                name: http
+            env:
+              - name: N8N_HOST
+                value: "0.0.0.0"
+              - name: N8N_PORT
+                value: "5678"
+              - name: N8N_PROTOCOL
+                value: "http"
+              - name: NODE_ENV
+                value: "production"
+              - name: N8N_METRICS
+                value: "true"
+              - name: N8N_DIAGNOSTICS_ENABLED
+                value: "false"
+              - name: WEBHOOK_URL
+                value: "http://n8n:5678/"
+              - name: GENERIC_TIMEZONE
+                value: "America/Sao_Paulo"
+              - name: N8N_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: app-secrets
+                    key: N8N_API_KEY
+                    optional: true
+              - name: TELEGRAM_BOT_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: app-secrets
+                    key: TELEGRAM_BOT_TOKEN
+                    optional: true
+              - name: TELEGRAM_CHAT_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: app-secrets
+                    key: AUTHORIZED_CHAT_ID
+                    optional: true
+            volumeMounts:
+              - name: n8n-data
+                mountPath: /home/node/.n8n
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "250m"
+              limits:
+                memory: "2Gi"
+                cpu: "1000m"
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: 5678
+              initialDelaySeconds: 30
+              periodSeconds: 15
+              timeoutSeconds: 5
+            readinessProbe:
+              httpGet:
+                path: /healthz/readiness
+                port: 5678
+              initialDelaySeconds: 15
+              periodSeconds: 10
+      - op: replace
+        path: /spec/template/spec/volumes
+        value:
+          - name: n8n-data
+            persistentVolumeClaim:
+              claimName: n8n-data

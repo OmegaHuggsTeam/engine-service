@@ -1,0 +1,187 @@
+{
+  "generated_at": "2026-03-03T20:36:37.854334+00:00",
+  "vault_path": "C:\\labs\\inteligence\\chunk-generator\\vault",
+  "stats": {
+    "total_files": 26,
+    "with_frontmatter": 23,
+    "total_tags": 6,
+    "unique_tags": 3
+  },
+  "tag_cloud": {
+    "spec": 3,
+    "orchestration": 2,
+    "evaluation": 1
+  },
+  "categories": {
+    "Agents": [
+      "ai_engineer_agent",
+      "analytics_agent",
+      "api_gateway_agent",
+      "claude_operator",
+      "cloud_provisioning_agent",
+      "computer_use_agent",
+      "data_engineering_agent",
+      "devops_agent",
+      "divine_inspiration",
+      "documentation_agent",
+      "evolutionary_orchestrator",
+      "frontend_agent",
+      "gemini_operator",
+      "groq_operator",
+      "marketing_agent",
+      "nlp_agent",
+      "security_audit_agent",
+      "social_media_agent",
+      "testing_agent",
+      "workflow_agent"
+    ],
+    "Guides": [
+      "Telegram_Commands"
+    ],
+    "Specs": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "Telemetry": [
+      "Wastage_Report"
+    ],
+    "root": [
+      "Dashboard"
+    ]
+  },
+  "connection_graph": {
+    "ai_engineer_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "analytics_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "api_gateway_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "claude_operator": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "cloud_provisioning_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "computer_use_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "data_engineering_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "devops_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "divine_inspiration": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "documentation_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "evolutionary_orchestrator": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "frontend_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "gemini_operator": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "groq_operator": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "marketing_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "nlp_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "security_audit_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "social_media_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "testing_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "workflow_agent": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "Dashboard": [
+      "AgentSelector",
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "AgentSelector": [
+      "TaskEvaluator",
+      "TaskExecutor"
+    ],
+    "TaskEvaluator": [
+      "AgentSelector",
+      "Stress_Mission_001",
+      "TaskExecutor"
+    ],
+    "TaskExecutor": [
+      "AgentSelector",
+      "TaskEvaluator"
+    ]
+  },
+  "frontmatter_schema": {
+    "tags": 23,
+    "agent_id": 20,
+    "name": 20,
+    "type": 20,
+    "status": 20,
+    "success_rate": 20,
+    "capabilities": 20,
+    "last_updated": 20,
+    "component": 3,
+    "file_path": 3,
+    "agent_count": 1,
+    "version": 1
+  }
+}

@@ -1,0 +1,330 @@
+{
+  "info": {
+    "name": "Sovereign Gateway API",
+    "_postman_id": "bunker-intelligence-gateway",
+    "description": "Complete API collection for the Neural Link Sovereign Gateway (port 8766) and Webhook Listener (port 8765)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "gateway_url", "value": "http://localhost:8766/api/v1"},
+    {"key": "webhook_url", "value": "http://localhost:8765"},
+    {"key": "lead_id", "value": "lead-001"},
+    {"key": "flow_id", "value": "flow-001"},
+    {"key": "agent_id", "value": "marketing_agent"},
+    {"key": "model_id", "value": "llama-3.3-70b-versatile"},
+    {"key": "usecase_id", "value": "UC-AUDIT-001"},
+    {"key": "tool_name", "value": "claude-code"}
+  ],
+  "item": [
+    {
+      "name": "Orchestrator",
+      "item": [
+        {
+          "name": "Submit Task",
+          "request": {
+            "method": "POST",
+            "url": "{{gateway_url}}/tasks",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"query\": \"What is the current roadmap status?\", \"context\": {}}"}
+          }
+        },
+        {
+          "name": "Recent Tasks",
+          "request": {"method": "GET", "url": "{{gateway_url}}/tasks/recent?limit=20"}
+        }
+      ]
+    },
+    {
+      "name": "Agents",
+      "item": [
+        {
+          "name": "List Agents",
+          "request": {"method": "GET", "url": "{{gateway_url}}/agents"}
+        },
+        {
+          "name": "Agent History",
+          "request": {"method": "GET", "url": "{{gateway_url}}/agents/{{agent_id}}/history?limit=20"}
+        }
+      ]
+    },
+    {
+      "name": "RAG & Graph",
+      "item": [
+        {
+          "name": "RAG Search",
+          "request": {"method": "GET", "url": "{{gateway_url}}/rag/search?q=campaign+creation&top_k=10"}
+        },
+        {
+          "name": "Graph Explore",
+          "request": {"method": "GET", "url": "{{gateway_url}}/graph/explore?center=marketing_agent&depth=2"}
+        },
+        {
+          "name": "Graph Services",
+          "request": {"method": "GET", "url": "{{gateway_url}}/graph/services"}
+        }
+      ]
+    },
+    {
+      "name": "Cluster",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {"method": "GET", "url": "{{gateway_url}}/cluster/health"}
+        }
+      ]
+    },
+    {
+      "name": "Jitbit",
+      "item": [
+        {
+          "name": "Macro Status",
+          "request": {"method": "GET", "url": "{{gateway_url}}/jitbit/status"}
+        },
+        {
+          "name": "Report Error",
+          "request": {
+            "method": "POST",
+            "url": "{{gateway_url}}/jitbit/error",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"macro\": \"login_flow\", \"error\": \"Element not found\", \"step\": 3}"}
+          }
+        },
+        {
+          "name": "Heal Environment",
+          "request": {"method": "POST", "url": "{{gateway_url}}/jitbit/heal"}
+        }
+      ]
+    },
+    {
+      "name": "Flows",
+      "item": [
+        {
+          "name": "Compose Workflow",
+          "request": {
+            "method": "POST",
+            "url": "{{gateway_url}}/flows/compose",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"objective\": \"Send welcome email when new lead is created\", \"context\": {}}"}
+          }
+        },
+        {
+          "name": "Deploy Workflow",
+          "request": {
+            "method": "POST",
+            "url": "{{gateway_url}}/flows/deploy",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"workflow\": {\"name\": \"Welcome Flow\", \"nodes\": [], \"connections\": {}}}"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "CRM - Leads",
+      "item": [
+        {
+          "name": "List Leads",
+          "request": {"method": "GET", "url": "{{gateway_url}}/crm/leads?limit=50"}
+        },
+        {
+          "name": "Search Leads",
+          "request": {"method": "GET", "url": "{{gateway_url}}/crm/leads/search?q=john"}
+        },
+        {
+          "name": "Create Lead",
+          "request": {
+            "method": "POST",
+            "url": "{{gateway_url}}/crm/leads",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"name\": \"John Doe\", \"email\": \"john@example.com\", \"company\": \"Acme Corp\", \"source_channel\": \"website\", \"tags\": [\"trial\", \"enterprise\"]}"}
+          }
+        },
+        {
+          "name": "Get Lead",
+          "request": {"method": "GET", "url": "{{gateway_url}}/crm/leads/{{lead_id}}"}
+        },
+        {
+          "name": "Update Lead",
+          "request": {
+            "method": "PUT",
+            "url": "{{gateway_url}}/crm/leads/{{lead_id}}",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"company\": \"Acme Corp Updated\", \"tags\": [\"trial\", \"enterprise\", \"hot\"]}"}
+          }
+        },
+        {
+          "name": "Delete Lead",
+          "request": {"method": "DELETE", "url": "{{gateway_url}}/crm/leads/{{lead_id}}"}
+        },
+        {
+          "name": "Lead Score",
+          "request": {"method": "GET", "url": "{{gateway_url}}/crm/leads/{{lead_id}}/score"}
+        },
+        {
+          "name": "Lead Interactions",
+          "request": {"method": "GET", "url": "{{gateway_url}}/crm/leads/{{lead_id}}/interactions?limit=50"}
+        }
+      ]
+    },
+    {
+      "name": "CRM - Flows",
+      "item": [
+        {
+          "name": "List Flows",
+          "request": {"method": "GET", "url": "{{gateway_url}}/crm/flows?limit=50"}
+        },
+        {
+          "name": "Create Flow",
+          "request": {
+            "method": "POST",
+            "url": "{{gateway_url}}/crm/flows",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"name\": \"Onboarding Flow\", \"objective\": \"Guide new leads through setup\"}"}
+          }
+        },
+        {
+          "name": "Get Flow",
+          "request": {"method": "GET", "url": "{{gateway_url}}/crm/flows/{{flow_id}}"}
+        },
+        {
+          "name": "Update Flow",
+          "request": {
+            "method": "PUT",
+            "url": "{{gateway_url}}/crm/flows/{{flow_id}}",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"status\": \"active\"}"}
+          }
+        },
+        {
+          "name": "Delete Flow",
+          "request": {"method": "DELETE", "url": "{{gateway_url}}/crm/flows/{{flow_id}}"}
+        },
+        {
+          "name": "Add Lead to Flow",
+          "request": {"method": "POST", "url": "{{gateway_url}}/crm/flows/{{flow_id}}/leads/{{lead_id}}"}
+        }
+      ]
+    },
+    {
+      "name": "CRM - Other",
+      "item": [
+        {
+          "name": "Record Interaction",
+          "request": {
+            "method": "POST",
+            "url": "{{gateway_url}}/crm/interactions",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"lead_id\": \"lead-001\", \"agent_id\": \"marketing_agent\", \"channel\": \"email\", \"action\": \"sent_welcome\", \"detail\": \"Welcome email sent successfully\"}"}
+          }
+        },
+        {
+          "name": "CRM Graph",
+          "request": {"method": "GET", "url": "{{gateway_url}}/crm/graph?limit=200"}
+        },
+        {
+          "name": "CRM Stats",
+          "request": {"method": "GET", "url": "{{gateway_url}}/crm/stats"}
+        }
+      ]
+    },
+    {
+      "name": "Pipeline & KPI",
+      "item": [
+        {
+          "name": "Pipeline Stats",
+          "request": {"method": "GET", "url": "{{gateway_url}}/pipeline/stats"}
+        },
+        {
+          "name": "Model Leaderboard",
+          "request": {"method": "GET", "url": "{{gateway_url}}/kpi/models"}
+        },
+        {
+          "name": "Model History",
+          "request": {"method": "GET", "url": "{{gateway_url}}/kpi/models/{{model_id}}/history?limit=30"}
+        },
+        {
+          "name": "Tool Comparison",
+          "request": {"method": "GET", "url": "{{gateway_url}}/kpi/tools"}
+        },
+        {
+          "name": "Tool History",
+          "request": {"method": "GET", "url": "{{gateway_url}}/kpi/tools/{{tool_name}}/history?limit=20"}
+        },
+        {
+          "name": "Submit Tool Review",
+          "request": {
+            "method": "POST",
+            "url": "{{gateway_url}}/kpi/tools/review",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"tool_name\": \"claude-code\", \"sprint_date\": \"2026-03-04\", \"score_correto\": 90, \"score_completo\": 85, \"score_qualidade\": 88, \"deliverables_done\": 12, \"deliverables_total\": 13, \"issues_critical\": 0, \"issues_medium\": 1, \"issues_low\": 2, \"reviewer\": \"audit-system\", \"notes\": \"UC-AUDIT-001 sprint\"}"}
+          }
+        },
+        {
+          "name": "Cost-Quality Analysis",
+          "request": {"method": "GET", "url": "{{gateway_url}}/kpi/cost-quality"}
+        },
+        {
+          "name": "Trends",
+          "request": {"method": "GET", "url": "{{gateway_url}}/kpi/trends?dimension=model&limit=90"}
+        },
+        {
+          "name": "Agent Heatmap",
+          "request": {"method": "GET", "url": "{{gateway_url}}/kpi/agents/heatmap"}
+        },
+        {
+          "name": "Anomalies",
+          "request": {"method": "GET", "url": "{{gateway_url}}/kpi/anomalies"}
+        },
+        {
+          "name": "Recommend Model",
+          "request": {"method": "GET", "url": "{{gateway_url}}/kpi/recommend?task_type=generation&min_quality=7"}
+        }
+      ]
+    },
+    {
+      "name": "UseCases",
+      "item": [
+        {
+          "name": "List UseCases",
+          "request": {"method": "GET", "url": "{{gateway_url}}/usecases?limit=50"}
+        },
+        {
+          "name": "Roadmap",
+          "request": {"method": "GET", "url": "{{gateway_url}}/usecases/roadmap"}
+        },
+        {
+          "name": "Coverage Matrix",
+          "request": {"method": "GET", "url": "{{gateway_url}}/usecases/coverage"}
+        },
+        {
+          "name": "Skill Gaps",
+          "request": {"method": "GET", "url": "{{gateway_url}}/usecases/gaps"}
+        },
+        {
+          "name": "Get UseCase",
+          "request": {"method": "GET", "url": "{{gateway_url}}/usecases/{{usecase_id}}"}
+        }
+      ]
+    },
+    {
+      "name": "Webhook Listener",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {"method": "GET", "url": "{{webhook_url}}/"}
+        },
+        {
+          "name": "IFTTT Webhook",
+          "request": {
+            "method": "POST",
+            "url": "{{webhook_url}}/webhook",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "X-Webhook-Key", "value": "your-key-here"}
+            ],
+            "body": {"mode": "raw", "raw": "{\"event\": \"modo_leitura\", \"value1\": \"on\"}"}
+          }
+        }
+      ]
+    }
+  ]
+}

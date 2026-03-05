@@ -1,0 +1,242 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UI Map - Mapa de Coordenadas da Interface",
+  "description": "Mapeamento de elementos da UI para automação do Viajante",
+  "version": "1.0.0",
+  "last_updated": "2026-03-03",
+  
+  "screen": {
+    "width": 1920,
+    "height": 1080,
+    "notes": "Ajustar conforme resolução real do monitor"
+  },
+  
+  "elements": {
+    "kiro_chat_input": {
+      "name": "Campo de entrada do chat do Kiro",
+      "coordinates": {
+        "x": 960,
+        "y": 1040
+      },
+      "region": {
+        "x": 100,
+        "y": 1000,
+        "width": 1720,
+        "height": 60
+      },
+      "description": "Campo de texto onde o usuário digita mensagens no Kiro",
+      "confidence_required": 0.80,
+      "safe_zone": true,
+      "notes": "Geralmente localizado na parte inferior da janela"
+    },
+    
+    "kiro_send_button": {
+      "name": "Botão de enviar mensagem do Kiro",
+      "coordinates": {
+        "x": 1850,
+        "y": 1040
+      },
+      "region": {
+        "x": 1800,
+        "y": 1000,
+        "width": 100,
+        "height": 60
+      },
+      "description": "Botão para enviar mensagem digitada",
+      "confidence_required": 0.85,
+      "safe_zone": true,
+      "notes": "Geralmente à direita do campo de entrada"
+    },
+    
+    "kiro_window": {
+      "name": "Janela principal do Kiro",
+      "coordinates": {
+        "x": 960,
+        "y": 540
+      },
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "description": "Área completa da janela do Kiro",
+      "confidence_required": 0.75,
+      "safe_zone": true,
+      "notes": "Pode variar se janela não estiver maximizada"
+    },
+    
+    "jitbit_window": {
+      "name": "Janela do Jitbit Macro Recorder",
+      "coordinates": {
+        "x": 960,
+        "y": 540
+      },
+      "region": {
+        "x": 200,
+        "y": 100,
+        "width": 1520,
+        "height": 880
+      },
+      "description": "Janela principal do Jitbit",
+      "confidence_required": 0.75,
+      "safe_zone": true,
+      "notes": "Ajustar conforme posição real da janela"
+    },
+    
+    "jitbit_record_button": {
+      "name": "Botão de gravar macro no Jitbit",
+      "coordinates": {
+        "x": 300,
+        "y": 150
+      },
+      "region": {
+        "x": 250,
+        "y": 120,
+        "width": 100,
+        "height": 60
+      },
+      "description": "Botão para iniciar gravação de macro",
+      "confidence_required": 0.85,
+      "safe_zone": true,
+      "notes": "Geralmente no topo da janela do Jitbit"
+    },
+    
+    "jitbit_play_button": {
+      "name": "Botão de executar macro no Jitbit",
+      "coordinates": {
+        "x": 400,
+        "y": 150
+      },
+      "region": {
+        "x": 350,
+        "y": 120,
+        "width": 100,
+        "height": 60
+      },
+      "description": "Botão para executar macro selecionado",
+      "confidence_required": 0.85,
+      "safe_zone": true,
+      "notes": "Ao lado do botão de gravar"
+    },
+    
+    "desktop_center": {
+      "name": "Centro do desktop",
+      "coordinates": {
+        "x": 960,
+        "y": 540
+      },
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "description": "Ponto central da tela",
+      "confidence_required": 1.0,
+      "safe_zone": true,
+      "notes": "Posição de referência segura"
+    },
+    
+    "emergency_safe_spot": {
+      "name": "Posição de emergência",
+      "coordinates": {
+        "x": 100,
+        "y": 100
+      },
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 200,
+        "height": 200
+      },
+      "description": "Canto superior esquerdo - posição segura para emergency stop",
+      "confidence_required": 1.0,
+      "safe_zone": true,
+      "notes": "Usado em situações de emergência"
+    }
+  },
+  
+  "forbidden_zones": {
+    "system_tray": {
+      "name": "Bandeja do sistema",
+      "region": {
+        "x": 1800,
+        "y": 1040,
+        "width": 120,
+        "height": 40
+      },
+      "description": "Área de notificações do Windows",
+      "reason": "Contém botões críticos do sistema",
+      "risk_level": "high"
+    },
+    
+    "window_close_buttons": {
+      "name": "Botões de fechar janelas",
+      "region": {
+        "x": 1850,
+        "y": 0,
+        "width": 70,
+        "height": 40
+      },
+      "description": "Botões X de fechar janelas",
+      "reason": "Pode encerrar aplicações importantes",
+      "risk_level": "high"
+    },
+    
+    "taskbar_start": {
+      "name": "Botão Iniciar do Windows",
+      "region": {
+        "x": 0,
+        "y": 1040,
+        "width": 60,
+        "height": 40
+      },
+      "description": "Botão Iniciar do Windows",
+      "reason": "Pode abrir menu do sistema",
+      "risk_level": "medium"
+    }
+  },
+  
+  "landmarks": {
+    "home_position": {
+      "name": "Posição inicial/repouso",
+      "coordinates": {
+        "x": 960,
+        "y": 540
+      },
+      "description": "Centro da tela - posição padrão de repouso"
+    },
+    
+    "emergency_position": {
+      "name": "Posição de emergência",
+      "coordinates": {
+        "x": 100,
+        "y": 100
+      },
+      "description": "Canto superior esquerdo - usado em emergency stop"
+    }
+  },
+  
+  "calibration": {
+    "last_calibrated": null,
+    "calibration_required": true,
+    "notes": [
+      "Este mapa deve ser calibrado para a resolução específica do monitor",
+      "Execute bin/calibrate_ui.py para atualizar coordenadas",
+      "Coordenadas são relativas ao canto superior esquerdo (0,0)",
+      "Valores atuais são estimativas e devem ser ajustados"
+    ]
+  },
+  
+  "usage_instructions": {
+    "how_to_use": [
+      "1. Carregue este JSON no seu script Python",
+      "2. Acesse coordenadas via: ui_map['elements']['kiro_chat_input']['coordinates']",
+      "3. Valide zonas proibidas antes de clicar",
+      "4. Use confidence_required para validação visual",
+      "5. Sempre verifique safe_zone antes de executar ação"
+    ],
+    "example_code": "import json\nwith open('specs/ui_map.json') as f:\n    ui_map = json.load(f)\nchat_x = ui_map['elements']['kiro_chat_input']['coordinates']['x']"
+  }
+}

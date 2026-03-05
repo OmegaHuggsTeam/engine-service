@@ -7,7 +7,7 @@ opencv-python-headless==4.9.0.80
 numpy==1.26.3
 httpx==0.26.0
 requests>=2.28.0
-PyYAML==6.0.1
+PyYAML==6.0.3
 
 # ChromaDB + embeddings (OpenAI preferido; sentence-transformers fallback local)
 chromadb>=0.4.0

@@ -20,7 +20,7 @@ asyncio==3.4.3
 httpx==0.26.0
 
 # YAML parsing para configurações
-PyYAML==6.0.1
+PyYAML==6.0.3
 
 # ============================================
 # Testing - Testes

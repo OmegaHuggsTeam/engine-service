@@ -12,13 +12,16 @@ Capabilities: computer_use, ui_automation, screenshot, typing, mouse_control,
 """
 
 import ctypes
-import ctypes.wintypes as wt
 import json
 import logging
 import math
 import os
 import subprocess
+import sys
 import time
+
+if sys.platform == "win32":
+    import ctypes.wintypes as wt
 from datetime import datetime
 from pathlib import Path
 from typing import Optional

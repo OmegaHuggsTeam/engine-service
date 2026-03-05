@@ -9,11 +9,13 @@ Subsistemas:
 
 import asyncio
 import ctypes
-import ctypes.wintypes
 import json
 import logging
 import sys
 import time
+
+if sys.platform == "win32":
+    import ctypes.wintypes
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional

@@ -40,4 +40,4 @@ jobs:
           with open('run_init.py') as f:
               ast.parse(f.read())
           print('run_init.py syntax OK')
-        "
+          "

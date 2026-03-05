@@ -1,0 +1,40 @@
+# Headless Service: aponta para o IP do host Windows na rede Tailscale.
+# Usado pelo cluster_health para verificar "Host Proxy" (sem tailscale CLI nos pods).
+#
+# IMPORTANTE: Atualize o IP nos Endpoints com o IP Tailscale do seu host:
+#   tailscale ip -4
+#   kubectl patch endpoints tailscale-host -n bunker --type='json' -p='[{"op":"replace","path":"/subsets/0/addresses/0/ip","value":"100.x.x.x"}]'
+#
+# O host deve expor a porta 8766 (Gateway ou port-forward):
+#   kubectl port-forward -n bunker svc/gateway 8766:8766
+#
+# Rede: Se o cluster tiver NetworkPolicy com default-deny egress, adicione uma regra
+# permitindo egress para 100.64.0.0/10 na porta 8766 (rede Tailscale).
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tailscale-host
+  namespace: bunker
+  labels:
+    app.kubernetes.io/name: tailscale-host
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: http
+      port: 8766
+      targetPort: 8766
+      protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: tailscale-host
+  namespace: bunker
+subsets:
+  - addresses:
+      - ip: "100.64.0.1"
+    ports:
+      - port: 8766
+        name: http

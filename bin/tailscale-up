@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Wrapper seguro: tailscale up
+# Permite ao Claude conectar a rede sem friccao
+
+set -e
+if command -v tailscale &>/dev/null; then
+    tailscale up
+    echo "Tailscale conectado. IP: $(tailscale ip -4 2>/dev/null || echo 'aguardando...')"
+else
+    echo "Tailscale nao instalado. Instale: https://tailscale.com/download"
+fi

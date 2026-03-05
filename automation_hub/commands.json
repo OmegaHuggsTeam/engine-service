@@ -1,0 +1,20 @@
+{
+  "queue": [],
+  "processed": [
+    {
+      "action": "MODO_LEITURA",
+      "raw_text": "Modo Leitura",
+      "event": "modo_leitura"
+    },
+    {
+      "action": "MODO_LEITURA",
+      "raw_text": "Modo leitura",
+      "event": "modo_leitura"
+    },
+    {
+      "action": "MODO_LEITURA",
+      "raw_text": "Modo leitura",
+      "event": "voice_command"
+    }
+  ]
+}

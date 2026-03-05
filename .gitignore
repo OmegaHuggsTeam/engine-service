@@ -1,0 +1,87 @@
+# ============================================
+# Bunker Intelligence - .gitignore
+# CRITICAL: This file must exist BEFORE git init
+# ============================================
+
+# Environment & Secrets
+.env
+*.env
+.env.local
+!.env.example
+
+# Data (25GB+ raw datasets)
+data/raw/
+data/processed/
+data/chunks/
+data/workflows/
+data/generated_workflows/
+
+# ChromaDB persistent store
+db/chroma/
+!db/chroma/.gitkeep
+
+# Chrome profile (146MB)
+.temp_profile/
+
+# Frontend build artifacts
+frontend/.next/
+frontend/node_modules/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Testing
+.pytest_cache/
+.hypothesis/
+htmlcov/
+coverage.xml
+.coverage
+.coverage.*
+
+# Type checking
+.mypy_cache/
+
+# Linting
+.ruff_cache/
+
+# Binary macros (1.4MB)
+*.mcr
+
+# Logs & temp
+logs/
+temp/
+test_output.txt
+*.log
+
+# System files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# IDE / Tool configs (project-specific)
+.kiro/
+.cursor/
+.claude/
+.vscode/
+.run_init_state
+system_heartbeat.json
+
+# Jitbit macros
+macros/
+superpowers/
+
+# Vault (personal notes)
+vault/
+
+# Private docs (não versionar)
+.private/
+referencias_removidas.zip

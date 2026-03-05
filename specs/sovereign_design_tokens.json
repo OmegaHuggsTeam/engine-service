@@ -1,0 +1,168 @@
+{
+  "$schema": "Sovereign AI Command Center — Design Tokens v1.0",
+  "$source": "src/interface/monitor_dashboard.py (lines 38-103)",
+  "colors": {
+    "semantic": {
+      "primary": "#e94560",
+      "secondary": "#0f3460",
+      "accent": "#448aff",
+      "success": "#00e676",
+      "warning": "#ffab00",
+      "error": "#ff1744",
+      "purple": "#ab47bc",
+      "cyan": "#26c6da",
+      "orange": "#ff7043",
+      "background": "#0e1117",
+      "surface": "#1a1a2e",
+      "surface-alt": "#16213e",
+      "text-primary": "#ffffff",
+      "text-secondary": "#a0a0b0",
+      "text-muted": "#606070",
+      "border": "#606070",
+      "grid": "#1a1a2e",
+      "footer": "#404050"
+    },
+    "agent_type": {
+      "domain": "#00e676",
+      "operator": "#448aff",
+      "specialist": "#e94560"
+    },
+    "event_type": {
+      "TASK_STARTED": "#448aff",
+      "TASK_COMPLETED": "#00e676",
+      "TASK_FAILED": "#ff1744",
+      "SYNC_TRIGGERED": "#ab47bc",
+      "SYNC_COMPLETED": "#26c6da",
+      "KILL_SWITCH_TRIGGERED": "#ff1744",
+      "CRITICAL_ANOMALY": "#ffab00",
+      "RECOVERY_ATTEMPTED": "#ff7043",
+      "LOG": "#a0a0b0",
+      "METRIC": "#448aff"
+    },
+    "status": {
+      "healthy": "#00e676",
+      "degraded": "#ffab00",
+      "critical": "#ff1744",
+      "unknown": "#606070"
+    },
+    "chart": {
+      "pie_markers": ["#e94560", "#448aff", "#00e676", "#ffab00", "#ab47bc", "#26c6da", "#ff7043"],
+      "confidence_scale": [[0, "#0f3460"], [0.5, "#e94560"], [1, "#00e676"]],
+      "relationship_scale": [[0, "#0f3460"], [0.5, "#e94560"], [1, "#ff6b6b"]]
+    },
+    "gradient": {
+      "surface": "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
+      "header": "linear-gradient(90deg, #0f3460, #e94560, #0f3460)"
+    }
+  },
+  "typography": {
+    "font_family": {
+      "ui": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "mono": "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace"
+    },
+    "font_size": {
+      "xs": "0.75rem",
+      "sm": "0.875rem",
+      "base": "1rem",
+      "lg": "1.125rem",
+      "xl": "1.25rem",
+      "2xl": "1.5rem",
+      "3xl": "1.875rem",
+      "4xl": "2.5rem"
+    },
+    "font_weight": {
+      "normal": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    },
+    "line_height": {
+      "tight": 1.25,
+      "normal": 1.5,
+      "relaxed": 1.75
+    }
+  },
+  "spacing": {
+    "unit": "0.25rem",
+    "scale": {
+      "0": "0",
+      "1": "0.25rem",
+      "2": "0.5rem",
+      "3": "0.75rem",
+      "4": "1rem",
+      "5": "1.25rem",
+      "6": "1.5rem",
+      "8": "2rem",
+      "10": "2.5rem",
+      "12": "3rem",
+      "16": "4rem",
+      "20": "5rem"
+    },
+    "grid_gap": "1rem",
+    "card_padding": "20px",
+    "card_margin": "8px 0",
+    "section_padding": "12px 16px"
+  },
+  "radii": {
+    "sm": "4px",
+    "md": "8px",
+    "lg": "12px",
+    "xl": "16px",
+    "full": "9999px"
+  },
+  "shadows": {
+    "sm": "0 1px 2px rgba(0, 0, 0, 0.3)",
+    "md": "0 4px 6px rgba(0, 0, 0, 0.4)",
+    "lg": "0 10px 15px rgba(0, 0, 0, 0.5)",
+    "glow-primary": "0 0 20px rgba(233, 69, 96, 0.3)",
+    "glow-accent": "0 0 20px rgba(68, 138, 255, 0.3)",
+    "glow-success": "0 0 20px rgba(0, 230, 118, 0.3)"
+  },
+  "breakpoints": {
+    "sm": "640px",
+    "md": "768px",
+    "lg": "1024px",
+    "xl": "1280px",
+    "2xl": "1536px"
+  },
+  "animation": {
+    "gradient_shift": {
+      "duration": "3s",
+      "timing": "ease",
+      "iteration": "infinite"
+    },
+    "transition": {
+      "fast": "150ms ease",
+      "normal": "200ms ease",
+      "slow": "300ms ease"
+    },
+    "pulse": {
+      "duration": "2s",
+      "timing": "ease-in-out",
+      "iteration": "infinite"
+    }
+  },
+  "components": {
+    "agent_card": {
+      "background": "#1a1a2e",
+      "border_radius": "8px",
+      "padding": "12px 16px",
+      "border_left_width": "4px"
+    },
+    "metric_card": {
+      "background": "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
+      "border": "1px solid #0f3460",
+      "border_radius": "12px",
+      "padding": "20px",
+      "value_size": "2.5em",
+      "value_color": "#e94560",
+      "label_size": "0.9em",
+      "label_color": "#a0a0b0"
+    },
+    "header_banner": {
+      "background": "linear-gradient(90deg, #0f3460, #e94560, #0f3460)",
+      "border_radius": "12px",
+      "padding": "16px"
+    }
+  }
+}

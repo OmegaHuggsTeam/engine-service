@@ -1,0 +1,18 @@
+# Modo Leitura - Preferencias Hugo
+
+## Configuracao de Luz
+luz: modo_leitura
+evento_ifttt: modo_leitura
+
+## Apps para abrir (ajuste os caminhos)
+apps:
+  - "C:\Windows\System32\notepad.exe"
+
+## Layout
+layout: focus_layout.ahk
+silenciar_notificacoes: true
+
+## Notas
+- Luz em modo leitura (quente, baixa intensidade)
+- Centralizar janela de leitura
+- Silenciar notificacoes do Windows

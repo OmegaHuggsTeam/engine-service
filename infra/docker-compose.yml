@@ -1,0 +1,48 @@
+# Kiro Cortex - Stack MLOps
+# Claude CLI: bin/docker-up para subir
+# Modo nativo: python automation_hub/bridge/webhook_listener.py 8765
+
+services:
+  neo4j:
+    image: neo4j:5.16.0-community
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neural_link_2024}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    restart: unless-stopped
+
+  webhook:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    ports:
+      - "8765:8765"
+    env_file:
+      - ../.env
+    volumes:
+      - ../automation_hub:/app/automation_hub
+    command: ["python", "automation_hub/bridge/webhook_listener.py", "8765"]
+    restart: unless-stopped
+
+  # Descomente para rodar Groq operator em background
+  # groq:
+  #   build:
+  #     context: ..
+  #     dockerfile: infra/Dockerfile
+  #   env_file:
+  #     - ../.env
+  #   volumes:
+  #     - ../automation_hub:/app/automation_hub
+  #   command: ["python", "automation_hub/agents/groq_operator.py"]
+  #   depends_on:
+  #     - webhook
+
+volumes:
+  neo4j_data:
+  neo4j_logs:

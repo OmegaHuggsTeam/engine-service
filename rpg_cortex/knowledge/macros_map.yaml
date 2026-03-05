@@ -1,0 +1,48 @@
+# Macro Knowledge Base - Memoria Muscular
+# Macros conhecidas com metadata para comandos de voz
+
+macros:
+  - name: "abrir_spotify"
+    file_path: "macros/abrir_spotify.mcr"
+    description: "Abre o Spotify pelo desktop"
+    keywords: ["spotify", "musica", "abrir spotify"]
+    pre_state:
+      screen: "desktop"
+    post_state:
+      screen: "spotify_main"
+    success_criteria: []
+    failure_criteria: []
+    timeout_seconds: 15
+
+  - name: "abrir_gmail"
+    file_path: "macros/abrir_gmail.mcr"
+    description: "Abre Gmail no navegador"
+    keywords: ["gmail", "email", "abrir gmail"]
+    chain_after: []
+    pre_state:
+      screen: "desktop"
+    post_state:
+      screen: "gmail"
+    success_criteria: []
+    failure_criteria: []
+    timeout_seconds: 20
+
+  - name: "foco_cursor"
+    file_path: "macros/foco_cursor.mcr"
+    description: "Foca a janela do Cursor"
+    keywords: ["cursor", "foco", "cursor ide"]
+    pre_state: {}
+    post_state: {}
+    success_criteria: []
+    failure_criteria: []
+    timeout_seconds: 5
+
+  - name: "modo_leitura"
+    file_path: "macros/modo_leitura.mcr"
+    description: "Abre leitor e configura layout"
+    keywords: ["leitura", "ler", "modo leitura"]
+    pre_state: {}
+    post_state: {}
+    success_criteria: []
+    failure_criteria: []
+    timeout_seconds: 10

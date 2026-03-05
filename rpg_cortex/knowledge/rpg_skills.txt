@@ -1,0 +1,18 @@
+# Path of the Traveler - RPG Skills Manifesto
+# Estrutura que o Kiro implementa para organizar suas habilidades
+
+[Skill: Portal do Código]
+Caminho: macros/abrir_vs_code.jmb
+Descrição: Teleporta o foco do sistema para o ambiente de desenvolvimento.
+
+[Skill: Olhar do Oráculo]
+Caminho: rpg_controls.py -> take_vision()
+Descrição: Revela o estado atual do monitor para o processamento do Groq.
+
+[Skill: Descanso do Guerreiro]
+Caminho: macros/limpar_area_trabalho.jmb
+Descrição: Fecha janelas desnecessárias e prepara o ambiente para o seu repouso.
+
+[Skill: Chamado do Hub]
+Caminho: bridge/webhook_listener.py
+Descrição: Abre o portal de comunicação com o mundo externo (Alexa/IFTTT).

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Atalho para claude_workspace.sh
+exec "$(dirname "$0")/../infra/claude_workspace.sh" "$@"

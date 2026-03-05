@@ -47,7 +47,7 @@ neo4j==5.16.0
 kubernetes==29.0.0
 
 # Rich library for terminal formatting and Telegram messages
-rich==13.7.0
+rich==14.3.3
 
 # FastAPI para webhook listener
 fastapi==0.109.0

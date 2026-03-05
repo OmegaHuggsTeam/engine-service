@@ -57,7 +57,7 @@ uvicorn==0.27.0
 pydantic==2.5.3
 
 # Process monitoring para stress tests
-psutil==5.9.8
+psutil==7.2.2
 
 # ============================================
 # Development - Desenvolvimento

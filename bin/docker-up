@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Wrapper seguro: docker-compose up -d
+# Permite ao Claude executar sem friccao
+
+set -e
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+COMPOSE_FILE="$PROJECT_ROOT/infra/docker-compose.yml"
+
+if [ ! -f "$COMPOSE_FILE" ]; then
+    echo "infra/docker-compose.yml nao encontrado. Stack roda nativamente."
+    echo "Webhook: python automation_hub/bridge/webhook_listener.py 8765"
+    exit 0
+fi
+
+if command -v docker-compose &>/dev/null; then
+    docker-compose -f "$COMPOSE_FILE" up -d
+elif command -v docker &>/dev/null && docker compose version &>/dev/null; then
+    docker compose -f "$COMPOSE_FILE" up -d
+else
+    echo "Docker nao instalado. Use: python automation_hub/bridge/webhook_listener.py 8765"
+fi

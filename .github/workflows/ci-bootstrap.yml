@@ -30,7 +30,7 @@ jobs:
 
       - name: Validate core imports
         run: |
-          python -c "from src.utils.llm_client import LLMClient; print('LLMClient OK')"
+          python -c "from src.utils.llm_client import KeyManager; print('KeyManager OK')"
           python -c "from src.agents.agent_factory import AgentFactory; print('AgentFactory OK')"
           python -c "from src.neural_link.api.sovereign_gateway import app; print('Gateway OK')"
 

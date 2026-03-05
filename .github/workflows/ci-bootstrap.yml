@@ -1,10 +1,12 @@
 name: CI Bootstrap
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'run_init.py'
       - 'requirements*.txt'
+      - '.github/workflows/ci-bootstrap.yml'
   pull_request:
     paths:
       - 'run_init.py'

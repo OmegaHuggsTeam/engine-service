@@ -1,0 +1,8 @@
+# Preferencias Gerais - Kiro Cortex
+
+## Contexto de Erro
+Se um comando falhar ou o webhook do IFTTT retornar erro, mude a luz para Vermelho Piscante e execute ahk/alert.ahk para me avisar no monitor principal.
+
+luz_erro: vermelho_piscante
+evento_ifttt_erro: vermelho_piscante
+alert_ahk: alert.ahk

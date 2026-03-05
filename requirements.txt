@@ -44,7 +44,7 @@ pytest-cov==4.1.0
 neo4j==5.16.0
 
 # Kubernetes Python client for cluster monitoring
-kubernetes==29.0.0
+kubernetes==35.0.0
 
 # Rich library for terminal formatting and Telegram messages
 rich==13.7.0

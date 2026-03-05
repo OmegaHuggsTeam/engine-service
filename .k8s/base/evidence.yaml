@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: evidence
-          image: chunk-generator-app:latest
+          image: mcp-engine-service-app:latest
           imagePullPolicy: IfNotPresent
           command:
             - python

@@ -1,5 +1,5 @@
 """
-Script de setup inicial do chunk-generator.
+Script de setup inicial do mcp-engine-service.
 Cria a estrutura de pastas e arquivos .gitkeep conforme o Blueprint.
 """
 
@@ -34,7 +34,7 @@ def create_folder_structure():
 
 
 def main():
-    print("Setup do chunk-generator - Lab Intelligence\n")
+    print("Setup do mcp-engine-service - Lab Intelligence\n")
     create_folder_structure()
     print("\n[OK] Estrutura de pastas criada com sucesso!")
 

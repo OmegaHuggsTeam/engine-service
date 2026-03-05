@@ -13,7 +13,7 @@
     }
   },
   "kiro": {
-    "title": "Cursor Settings - chunk-generator - Cursor",
+    "title": "Cursor Settings - mcp-engine-service - Cursor",
     "center": {
       "x": 994,
       "y": 515
@@ -27,7 +27,7 @@
   },
   "windows_found": [
     {
-      "title": "Cursor Settings - chunk-generator - Cursor",
+      "title": "Cursor Settings - mcp-engine-service - Cursor",
       "center": {
         "x": 994,
         "y": 515
@@ -41,7 +41,7 @@
       }
     },
     {
-      "title": ".env - chunk-generator - Kiro",
+      "title": ".env - mcp-engine-service - Kiro",
       "center": {
         "x": 960,
         "y": 516

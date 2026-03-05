@@ -486,7 +486,7 @@ def render_sidebar_controls():
         st.markdown("### System Info")
         st.markdown(f"- **Time**: {datetime.now().strftime('%H:%M:%S')}")
         st.markdown(f"- **Python**: {sys.version.split()[0]}")
-        st.markdown(f"- **Project**: chunk-generator")
+        st.markdown(f"- **Project**: mcp-engine-service")
         st.markdown(f"- **Phase**: 6 - Dashboard")
 
         st.markdown("---")

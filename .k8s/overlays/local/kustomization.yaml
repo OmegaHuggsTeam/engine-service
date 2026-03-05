@@ -26,7 +26,7 @@ patches:
         path: /spec/template/spec/containers
         value:
           - name: app
-            image: chunk-generator-app:latest
+            image: mcp-engine-service-app:latest
             imagePullPolicy: IfNotPresent
             command: ["python", "-m", "src.neural_link.telemetry.telegram_command_handler"]
             env:
@@ -113,7 +113,7 @@ patches:
         path: /spec/template/spec/containers
         value:
           - name: gateway
-            image: chunk-generator-app:latest
+            image: mcp-engine-service-app:latest
             imagePullPolicy: IfNotPresent
             command: ["python", "-m", "uvicorn", "src.neural_link.api.sovereign_gateway:app", "--host", "0.0.0.0", "--port", "8766"]
             ports:
@@ -300,7 +300,7 @@ patches:
         path: /spec/template/spec/containers
         value:
           - name: evidence
-            image: chunk-generator-app:latest
+            image: mcp-engine-service-app:latest
             imagePullPolicy: IfNotPresent
             command: ["python", "-m", "uvicorn", "src.neural_link.services.evidence_server:app", "--host", "0.0.0.0", "--port", "5000"]
             ports:

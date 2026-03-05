@@ -6,7 +6,7 @@
 |-------|-------|
 | **ID** | UC-AUDIT-001 |
 | **Domain** | audit |
-| **Repos** | chunk-generator (self) |
+| **Repos** | mcp-engine-service (self) |
 | **Priority** | P1-High |
 | **Complexity** | L |
 | **Status** | Active |
@@ -17,16 +17,16 @@ Systematic audit of the entire Bunker Intelligence / Neural Link CRM project. Co
 
 ### Data Models
 
-- **Model**: AuditResult (repo: chunk-generator, path: `src/neural_link/graph/queries.py`)
+- **Model**: AuditResult (repo: mcp-engine-service, path: `src/neural_link/graph/queries.py`)
   - Fields: `id: string`, `target: string`, `target_type: enum[folder|spec|agent|doc]`, `score_correto: float`, `score_completo: float`, `score_qualidade: float`, `nota_geral: float`, `file_count: int`, `test_count: int`, `issues: list[string]`, `recommendations: list[string]`, `audited_at: datetime`
 
 ### Services
 
-- **Service**: UseCase Indexer (repo: chunk-generator, path: `src/neural_link/rag/usecase_indexer.py`)
+- **Service**: UseCase Indexer (repo: mcp-engine-service, path: `src/neural_link/rag/usecase_indexer.py`)
   - Methods: `index_usecase()` — parses this spec into ChromaDB chunks + Neo4j :UseCase node
-- **Service**: ToolScorecard (repo: chunk-generator, path: `src/neural_link/telemetry/tool_scorecard.py`)
+- **Service**: ToolScorecard (repo: mcp-engine-service, path: `src/neural_link/telemetry/tool_scorecard.py`)
   - Methods: `submit_review()`, `get_reviews()` — persists scoring using the review formula
-- **Service**: CostQualityAnalyzer (repo: chunk-generator, path: `src/neural_link/telemetry/cost_quality_analyzer.py`)
+- **Service**: CostQualityAnalyzer (repo: mcp-engine-service, path: `src/neural_link/telemetry/cost_quality_analyzer.py`)
   - Methods: `recommend_model()` — suggests optimal model for audit classification tasks
 
 ### Routes/Endpoints

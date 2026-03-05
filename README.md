@@ -1,6 +1,6 @@
-# Bunker Intelligence — Chunk Generator
+# MCP Engine Service
 
-[![CI Tests](https://github.com/bunker-intelligence/chunk-generator/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/bunker-intelligence/chunk-generator/actions)
+[![CI Tests](https://github.com/OmegaHuggsTeam/engine-service/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/OmegaHuggsTeam/engine-service/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -32,7 +32,7 @@ Plataforma multi-agente para extração, chunking e RAG. Processa vídeos, trans
 ## Quick Start
 
 ```bash
-cd chunk-generator
+cd engine-service
 python run_init.py
 ```
 
@@ -182,7 +182,7 @@ python scripts/demo_composer.py
 ## Estrutura do Projeto
 
 ```
-chunk-generator/
+engine-service/
   run_init.py           # Self-Bootstrap - unico comando necessario
   dashboard.py          # Interface Streamlit
   setup_project.py      # Criação de pastas

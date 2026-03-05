@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Sovereign Gateway API",
-    "_postman_id": "bunker-intelligence-gateway",
+    "_postman_id": "mcp-engine-service-gateway",
     "description": "Complete API collection for the Neural Link Sovereign Gateway (port 8766) and Webhook Listener (port 8765)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },

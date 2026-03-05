@@ -8,7 +8,7 @@ Commands:
     transform - Describes available transformations
     validate  - Validates JSON/CSV files for basic integrity
     schema    - Infers schema from a JSON file
-    pipeline  - Shows status of chunk-generator pipeline
+    pipeline  - Shows status of mcp-engine-service pipeline
 """
 
 import csv
@@ -450,7 +450,7 @@ class DataEngineeringAgent:
             }
 
     def _pipeline(self, args: str) -> dict:
-        """Show status of the chunk-generator pipeline."""
+        """Show status of the mcp-engine-service pipeline."""
         pipeline_dirs = {
             "raw": self.data_dir / "raw",
             "processed": self.data_dir / "processed",

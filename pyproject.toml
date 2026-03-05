@@ -1,5 +1,5 @@
 [project]
-name = "bunker-intelligence"
+name = "mcp-engine-service"
 version = "0.1.0"
 description = "Multi-agent AI platform with RAG, Neo4j graph, and 5-layer optimization pipeline"
 requires-python = ">=3.11"

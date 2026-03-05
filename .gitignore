@@ -59,6 +59,7 @@ coverage.xml
 # Logs & temp
 logs/
 temp/
+test_output.txt
 *.log
 
 # System files

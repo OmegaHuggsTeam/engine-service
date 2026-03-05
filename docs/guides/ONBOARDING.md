@@ -22,8 +22,8 @@ O sistema permite criar agentes especializados por domínio (CRM, Marketing, n8n
 
 ```bash
 # 1. Clone
-git clone https://github.com/seu-org/bunker-intelligence.git
-cd bunker-intelligence
+git clone https://github.com/OmegaHuggsTeam/engine-service.git
+cd engine-service
 
 # 2. Ambiente virtual
 python -m venv .venv

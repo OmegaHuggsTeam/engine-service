@@ -180,7 +180,7 @@ main ← develop ← agent/marketing
 
 | Item | Configuração |
 |------|--------------|
-| **Projeto** | `chunk-generator` (ou nome do repo no GitHub) |
+| **Projeto** | `mcp-engine-service` (ou nome do repo no GitHub) |
 | **Linguagens** | Python, TypeScript/JavaScript |
 | **Exclusões** | `node_modules/`, `.venv/`, `db/`, `data/` |
 | **Cobertura** | Integrar com pytest-cov (formato Cobertura XML) |
@@ -194,7 +194,7 @@ main ← develop ← agent/marketing
 ### Exemplo `sonar-project.properties`
 
 ```properties
-sonar.projectKey=chunk-generator
+sonar.projectKey=mcp-engine-service
 sonar.organization=seu-org
 sonar.sources=src,frontend/src,automation_hub
 sonar.exclusions=**/node_modules/**,**/.venv/**,**/db/**,**/data/**,**/__pycache__/**

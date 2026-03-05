@@ -20,8 +20,8 @@ Optional:
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-org/chunk-generator.git
-cd chunk-generator
+git clone https://github.com/OmegaHuggsTeam/engine-service.git
+cd engine-service
 pip install -r requirements.txt
 ```
 
@@ -136,7 +136,7 @@ python -m pytest src/neural_link/tests/ -x -q
 ### Project Structure
 
 ```
-chunk-generator/
+engine-service/
   src/
     neural_link/          # Core orchestration layer
       api/                # Gateway endpoints
@@ -215,7 +215,7 @@ GROQ_KEY_2=gsk_xxx
 ### Import errors
 ```
 # Ensure you're in the project root
-cd chunk-generator
+cd engine-service
 # Install missing deps
 pip install -r requirements.txt
 ```

@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: bunker
+
+commonLabels:
+  app.kubernetes.io/part-of: bunker
+
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - pvcs.yaml
+  - tailscale-host.yaml
+  - chroma.yaml
+  - neo4j.yaml
+  - evidence.yaml
+  - app.yaml
+  - gateway.yaml
+  - n8n.yaml

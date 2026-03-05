@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evidence-server
+  namespace: bunker
+  labels:
+    app.kubernetes.io/name: evidence
+  annotations:
+    tailscale.com/hostname: bunker-evidence
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: evidence
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: evidence
+    spec:
+      containers:
+        - name: evidence
+          image: chunk-generator-app:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -m
+            - uvicorn
+            - src.neural_link.services.evidence_server:app
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "5000"
+          ports:
+            - containerPort: 5000
+          env:
+            - name: EVIDENCE_DIR
+              value: /app/temp/evidence
+            - name: EVIDENCE_SERVER_HOST
+              value: "0.0.0.0"
+            - name: PYTHONPATH
+              value: /app
+          volumeMounts:
+            - name: evidence-data
+              mountPath: /app/temp/evidence
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+        # Tailscale Sidecar - bunker-evidence.tailscale.net
+        - name: tailscale
+          image: tailscale/tailscale:v1.64.1
+          env:
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: tailscale-auth
+                  key: TS_AUTHKEY
+            - name: TS_EXTRA_ARGS
+              value: "--accept-routes=false --advertise-exit-node=false --hostname=bunker-evidence --reset"
+            - name: TS_USERSPACE
+              value: "false"
+            - name: TS_ACCEPT_DNS
+              value: "false"
+            - name: TS_KUBE_SECRET
+              value: ""
+            - name: TS_STATE_DIR
+              value: /var/lib/tailscale
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          volumeMounts:
+            - name: dev-tun
+              mountPath: /dev/net/tun
+            - name: ts-state
+              mountPath: /var/lib/tailscale
+      volumes:
+        - name: evidence-data
+          persistentVolumeClaim:
+            claimName: evidence-data
+        - name: ts-state
+          emptyDir: {}
+        - name: dev-tun
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: evidence
+  namespace: bunker
+  labels:
+    app.kubernetes.io/name: evidence
+spec:
+  selector:
+    app.kubernetes.io/name: evidence
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP

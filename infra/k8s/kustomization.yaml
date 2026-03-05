@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: bunker
+
+resources:
+  - namespace.yaml
+  - pvc.yaml
+  - secret-tailscale.yaml  # neo4j-auth apenas; tailscale-auth via kubectl create
+  - chroma-deployment.yaml
+  - neo4j-deployment.yaml
+  - evidence-deployment.yaml
+  - app-deployment.yaml
+
+# Ordem sugerida: namespace -> secrets -> pvc -> deployments
+# kubectl apply -k infra/k8s/

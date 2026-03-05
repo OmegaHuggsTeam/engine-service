@@ -50,6 +50,8 @@ class MonitorLayout:
         self._detect()
 
     def _detect(self):
+        if sys.platform != "win32":
+            return
         user32 = ctypes.windll.user32
         SM_XVIRTUALSCREEN = 76
         SM_YVIRTUALSCREEN = 77

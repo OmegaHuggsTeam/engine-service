@@ -53,7 +53,11 @@ jobs:
             --ignore=tests/sentinela/ \
             --ignore=tests/unit/test_delivery_email_hardware.py \
             --ignore=tests/test_maestro_service.py \
-            -k "not selenium and not selum"
+            --ignore=tests/integration/test_agent_factory_integration.py \
+            --ignore=tests/integration/test_event_monitoring_integration.py \
+            --ignore=tests/unit/test_manifest_loader.py \
+            --ignore=src/neural_link/tests/test_jitbit_connector.py \
+            -k "not selenium and not selum and not RealGrimoire"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

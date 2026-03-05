@@ -379,9 +379,11 @@ class TelegramNotifier:
             extra={"queue_size": len(self.message_queue)},
         )
 
-        while self.message_queue:
-            message = self.message_queue.popleft()
+        # Drain queue into snapshot to prevent infinite loop from re-queuing
+        batch = list(self.message_queue)
+        self.message_queue.clear()
 
+        for message in batch:
             success = self._send_with_retry(
                 chat_id=message["chat_id"],
                 text=message["text"],

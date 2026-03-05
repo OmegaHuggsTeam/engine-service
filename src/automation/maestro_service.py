@@ -52,6 +52,9 @@ class MonitorInfo:
 
 def detect_monitors() -> list[MonitorInfo]:
     """Detecta monitores via Win32 EnumDisplayMonitors."""
+    if sys.platform != "win32":
+        return []
+
     monitors: list[MonitorInfo] = []
 
     def _callback(hMonitor, hdcMonitor, lprcMonitor, dwData):

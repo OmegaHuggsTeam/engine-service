@@ -35,7 +35,8 @@ jobs:
           python -c "from src.neural_link.api.sovereign_gateway import app; print('Gateway OK')"
 
       - name: Basic run_init parsing
-        run: python -c "
+        run: |
+          python -c "
           import ast
           with open('run_init.py') as f:
               ast.parse(f.read())

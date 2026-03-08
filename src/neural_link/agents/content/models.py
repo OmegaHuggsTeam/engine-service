@@ -4,10 +4,15 @@ Covers research ingestion, script generation, audio/video assets,
 social media outputs, workflow execution tracking, and product definitions.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field
+
+
+def _utcnow() -> datetime:
+    """Timezone-aware UTC now (datetime.utcnow is deprecated in 3.12+)."""
+    return datetime.now(timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +52,7 @@ class ScriptSection(BaseModel):
     type: str
     title: str
     content: str
-    duration_estimate: float
+    duration_estimate: int  # seconds
 
 
 class PodcastScript(BaseModel):
@@ -55,7 +60,7 @@ class PodcastScript(BaseModel):
 
     title: str
     episode_number: int
-    duration_estimate: float
+    duration_estimate: int  # total seconds
     sections: list[ScriptSection]
     ssml: str
     plain_text: str
@@ -137,7 +142,7 @@ class Execution(BaseModel):
 
     id: str
     workflow_product_id: str
-    started_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime = Field(default_factory=_utcnow)
     completed_at: Optional[datetime] = None
     status: str
     outputs: dict[str, Any] = Field(default_factory=dict)
@@ -158,14 +163,14 @@ class WorkflowProduct(BaseModel):
     description: str
     category: str
     n8n_workflow_json: dict[str, Any]
-    config: dict[str, Any]
+    config: dict[str, Any] = Field(default_factory=dict)
     schedule: Optional[str] = None
-    agents_used: list[str]
+    agents_used: list[str] = Field(default_factory=list)
     webhook_urls: list[str] = Field(default_factory=list)
     status: str = "draft"
     created_from_template: Optional[str] = None
     brand_voice_file: Optional[str] = None
     executions: list[Any] = Field(default_factory=list)
     cost_per_run: float
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)

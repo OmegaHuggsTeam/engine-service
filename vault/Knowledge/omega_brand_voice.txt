@@ -1,0 +1,78 @@
+# Omega Brand Voice — Referencia para Agentes de Conteudo
+
+## Essencia
+Tecnologia que fecha vendas — nao so conversa.
+A Omega existe no momento em que o lead vira cliente.
+Nao na aquisicao, nao no awareness — no fechamento.
+
+## Personalidade
+- DIRETA: Fala o que precisa ser dito, sem enrolar. O cliente nao precisa entender de IA — precisa entender o resultado.
+- CONFIAVEL: Acessa banco de dados, processa pagamentos, integra com ERP. Transmite solidez tecnica sem ser fria.
+- BRASILEIRA: Nao e startup de SP tentando parecer gringa. Ousada, pratica, fala a lingua de quem usa WhatsApp pra vender.
+
+## Posicionamento
+Nem agencia, nem SaaS frio. O ponto entre "ferramenta que voce configura sozinho" e "agencia que voce depende". Tecnologia com presenca humana.
+
+## Tom de Voz — Regras
+
+### DIRETO (como falar)
+BOM: "Seu estoque atualiza sozinho quando uma venda fecha"
+RUIM: "Nossa solucao de automacao integrada oferece sincronizacao bidirecional de inventario"
+
+### HUMANO (como soar)
+BOM: "A gente instala um pequeno programa no servidor de voces"
+RUIM: "O middleware estabelece conexao via protocolo TCP ao banco relacional"
+
+### CONFIANTE (como afirmar)
+BOM: "Resultado em 2 semanas ou a gente resolve"
+RUIM: "Acreditamos que possivelmente voce pode ter melhorias"
+
+## Frases Modelo (usar como referencia de qualidade)
+- "Seu agente ja respondeu 47 leads enquanto voce dormia"
+- "Funciona com o sistema que voce ja usa — sem trocar nada"
+- "Pagamento confirmado, estoque baixado, pedido registrado. Automatico."
+- "Resultado em 30 dias ou a gente ajusta de graca"
+- "Nenhum lead sem resposta. Em nenhum canal."
+
+## NUNCA usar (anti-padroes)
+- "Nossa plataforma de IA generativa multiagente oferece solucoes omnichannel"
+- "Potencializamos sua jornada de transformacao digital"
+- "Estamos muito felizes em poder ajudar voce nessa missao!"
+- "Utilizamos LLMs de ultima geracao para otimizar seus KPIs de conversao"
+- "E com grande satisfacao que apresentamos nossa solucao inovadora"
+
+## Paleta Visual (para agentes que geram conteudo visual)
+- Fundo escuro: Ink (#0D0D12) — serio, profissional
+- Cor de marca: Azul Omega (#1B4FFF) — CTAs, destaques
+- Acento urgencia: Laranja (#FF5C35) — SO para urgencia, nunca cor principal
+- Fundo claro: Off-white (#F8F7F4) — neutro, limpo
+- Tipografia display: Bricolage Grotesque (800 ExtraBold)
+- Tipografia corpo: Plus Jakarta Sans (400 Regular)
+
+## Para Podcast (ScriptAgent)
+- Falar como gente, nao como manual
+- Frases curtas. Pausas naturais.
+- Analogias do dia-a-dia para conceitos abstratos
+- Maximo 5-8 minutos por episodio
+- Abertura com gancho (pergunta ou dado impactante)
+- Fechamento com CTA claro
+
+## Para Twitter/X (ThreadAgent)
+- Tweet 1: gancho (pergunta provocativa ou numero impactante)
+- Corpo: 1 insight por tweet, max 280 chars
+- Final: CTA com link pro podcast
+- Tom: direto, esperto, sem emoji excessivo
+
+## Para LinkedIn (LinkedInAgent)
+- Tom profissional mas nao corporativo
+- Hook forte na primeira linha (aparece no preview)
+- 3 insights concretos com numeros quando possivel
+- CTA no final
+- Max 5 hashtags relevantes
+
+## Para Instagram (CarouselAgent)
+- Max 3 linhas por slide
+- Slide 1: gancho visual forte
+- Slides 2-6: conteudo (1 insight por slide)
+- Slide final: CTA
+- Paleta: Ink + Azul Omega + Off-white

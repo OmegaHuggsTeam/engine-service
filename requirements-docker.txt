@@ -18,7 +18,7 @@ python-dotenv>=1.0.0
 neo4j==5.16.0
 
 # FastAPI + Evidence Server
-fastapi==0.109.0
+fastapi==0.135.1
 uvicorn==0.27.0
 pydantic==2.5.3
 

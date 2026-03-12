@@ -1,5 +1,5 @@
 """
-CRM Repo Ingestor - Importa codigo dos repos CRM SendSpeed/UserIn.
+CRM Repo Ingestor - Importa codigo dos repos CRM SendSpeed/HuggsAI.
 
 Segue o padrao do github_ingestor.py mas para arquivos .ts/.tsx/.js/.jsx
 nas branches pedro-crm. Usa GitHub Trees API para listar arquivos e

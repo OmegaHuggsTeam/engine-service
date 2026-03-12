@@ -152,7 +152,7 @@ class UseCaseRegistry:
         gaps = self.get_skill_gaps()
 
         lines = [
-            "# ROADMAP AI-First: CRM UserIn/SendSpeed",
+            "# ROADMAP AI-First: CRM HuggsAI/SendSpeed",
             "",
             f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
             "",

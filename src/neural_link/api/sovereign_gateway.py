@@ -43,6 +43,25 @@ class AgentStatus(BaseModel):
     success_rate: float | None = None
 
 
+class AgentCreateRequest(BaseModel):
+    """Request body for creating/registering a custom agent."""
+    id: str
+    name: str
+    type: str = "custom"  # domain | specialist | operator | custom
+    module_path: str = ""
+    capabilities: list[str] = Field(default_factory=list)
+    status: str = "active"
+
+
+class AgentUpdateRequest(BaseModel):
+    """Request body for updating an existing agent."""
+    name: str | None = None
+    type: str | None = None
+    capabilities: list[str] | None = None
+    status: str | None = None
+    success_rate: float | None = None
+
+
 class TaskSubmission(BaseModel):
     query: str
     context: dict[str, Any] | None = None
@@ -470,6 +489,93 @@ async def agent_history(agent_id: str, limit: int = Query(default=20, le=100)):
     except Exception as exc:
         logger.warning("agent_history error: %s", exc)
         return []
+
+
+@router.post("/agents", response_model=AgentStatus)
+async def create_agent(body: AgentCreateRequest):
+    """Register a custom agent in Neo4j."""
+    if not _svc.graph:
+        return {"error": "Graph database not available"}
+    try:
+        from ..graph import queries as q
+        params = {
+            "id": body.id,
+            "name": body.name,
+            "type": body.type,
+            "module_path": body.module_path,
+            "capabilities": body.capabilities,
+            "status": body.status,
+        }
+        rows = _svc.graph.execute_write(q.UPSERT_AGENT, params)
+        node = rows[0]["a"] if rows else params
+        return AgentStatus(
+            id=body.id, name=body.name, type=body.type,
+            status=body.status, success_rate=None,
+        )
+    except Exception as exc:
+        logger.error("create_agent error: %s", exc)
+        return {"error": str(exc)}
+
+
+@router.put("/agents/{agent_id}", response_model=AgentStatus)
+async def update_agent(agent_id: str, body: AgentUpdateRequest):
+    """Update an existing agent's metadata."""
+    if not _svc.graph:
+        return {"error": "Graph database not available"}
+    try:
+        sets = []
+        params: dict[str, Any] = {"agent_id": agent_id}
+        if body.name is not None:
+            sets.append("a.name = $name")
+            params["name"] = body.name
+        if body.type is not None:
+            sets.append("a.type = $type")
+            params["type"] = body.type
+        if body.capabilities is not None:
+            sets.append("a.capabilities = $capabilities")
+            params["capabilities"] = body.capabilities
+        if body.status is not None:
+            sets.append("a.status = $status")
+            params["status"] = body.status
+        if body.success_rate is not None:
+            sets.append("a.success_rate = $success_rate")
+            params["success_rate"] = body.success_rate
+        if not sets:
+            return {"error": "No fields to update"}
+        query = f"MATCH (a:Agent {{id: $agent_id}}) SET {', '.join(sets)} RETURN a"
+        rows = _svc.graph.execute_write(query, params)
+        if not rows:
+            return {"error": "Agent not found"}
+        node = rows[0]["a"]
+        return AgentStatus(
+            id=agent_id,
+            name=node.get("name", ""),
+            type=node.get("type", ""),
+            status=node.get("status", "active"),
+            success_rate=node.get("success_rate"),
+        )
+    except Exception as exc:
+        logger.error("update_agent error: %s", exc)
+        return {"error": str(exc)}
+
+
+@router.delete("/agents/{agent_id}")
+async def delete_agent(agent_id: str):
+    """Remove an agent from Neo4j (soft-delete: sets status=inactive)."""
+    if not _svc.graph:
+        return {"error": "Graph database not available"}
+    try:
+        rows = _svc.graph.execute_write(
+            "MATCH (a:Agent {id: $agent_id}) "
+            "SET a.status = 'inactive' RETURN a",
+            {"agent_id": agent_id},
+        )
+        if not rows:
+            return {"error": "Agent not found"}
+        return {"success": True, "agent_id": agent_id}
+    except Exception as exc:
+        logger.error("delete_agent error: %s", exc)
+        return {"error": str(exc)}
 
 
 # -- Tasks -------------------------------------------------------------------

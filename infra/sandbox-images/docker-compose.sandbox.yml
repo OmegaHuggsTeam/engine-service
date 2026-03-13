@@ -1,0 +1,93 @@
+version: "3.9"
+
+# Sandbox Container Images — Build & Test
+# Usage: docker compose -f docker-compose.sandbox.yml build
+# Test:  docker compose -f docker-compose.sandbox.yml up --abort-on-container-exit
+
+services:
+  trigger:
+    build:
+      context: ./trigger
+      dockerfile: Dockerfile
+    image: huggsai/trigger:latest
+    container_name: sandbox-trigger-test
+    environment:
+      NODE_TYPE: trigger
+      NODE_SUBTYPE: manual_trigger
+      NODE_CONFIG: '{"source": "test"}'
+    read_only: true
+    tmpfs:
+      - /tmp:size=10M
+    mem_limit: 128m
+    cpus: 0.25
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - sandbox-net
+
+  condition:
+    build:
+      context: ./condition
+      dockerfile: Dockerfile
+    image: huggsai/condition:latest
+    container_name: sandbox-condition-test
+    environment:
+      NODE_TYPE: condition
+      NODE_SUBTYPE: field_check
+      NODE_CONFIG: '{"field": "score", "operator": "gte", "value": 50, "context": {"score": 75}}'
+    read_only: true
+    tmpfs:
+      - /tmp:size=10M
+    mem_limit: 128m
+    cpus: 0.25
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - sandbox-net
+
+  action:
+    build:
+      context: ./action
+      dockerfile: Dockerfile
+    image: huggsai/action:latest
+    container_name: sandbox-action-test
+    environment:
+      NODE_TYPE: action
+      NODE_SUBTYPE: add_tag
+      NODE_CONFIG: '{"payload": {"contact_id": "test-001", "tag": "vip"}}'
+      CRM_API_URL: ""
+      CRM_API_TOKEN: ""
+    read_only: true
+    tmpfs:
+      - /tmp:size=10M
+    mem_limit: 128m
+    cpus: 0.25
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - sandbox-net
+
+  transform:
+    build:
+      context: ./transform
+      dockerfile: Dockerfile
+    image: huggsai/transform:latest
+    container_name: sandbox-transform-test
+    environment:
+      NODE_TYPE: transform
+      NODE_SUBTYPE: jmespath
+      NODE_CONFIG: '{"expression": "contacts[?score > `50`].name", "data": {"contacts": [{"name": "Alice", "score": 80}, {"name": "Bob", "score": 30}]}}'
+    read_only: true
+    tmpfs:
+      - /tmp:size=10M
+    mem_limit: 128m
+    cpus: 0.25
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - sandbox-net
+
+networks:
+  sandbox-net:
+    driver: bridge
+    internal: true

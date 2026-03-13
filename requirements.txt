@@ -43,6 +43,9 @@ pytest-cov==4.1.0
 # Neo4j driver (se usar banco de grafos)
 neo4j==5.16.0
 
+# Sentence Transformers (para multi-embedding: nomic, minilm)
+sentence-transformers>=2.2.0
+
 # Kubernetes Python client for cluster monitoring
 kubernetes==29.0.0
 
@@ -53,11 +56,21 @@ rich==13.7.0
 fastapi==0.109.0
 uvicorn==0.27.0
 
+# Docker SDK for container orchestration
+docker>=7.0.0
+
 # Pydantic para validação de dados
 pydantic==2.5.3
 
 # Process monitoring para stress tests
 psutil==5.9.8
+
+# LiteLLM — Router inteligente para multiplos LLM providers
+# Roteamento por latencia, fallbacks, cost tracking
+litellm>=1.40.0
+
+# MCP — Model Context Protocol SDK para expor tools
+mcp[cli]>=1.0.0
 
 # ============================================
 # Development - Desenvolvimento

@@ -89,6 +89,19 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Docling Serve - Parser de documentos complexos (PDF, DOCX, PPTX, OCR)
+  docling:
+    image: ds4sd/docling-serve:latest
+    container_name: bunker-docling
+    ports:
+      - "5001:5001"
+    environment:
+      - DOCLING_BACKEND=docling
+      - DOCLING_OCR=easyocr
+    networks:
+      - bunker
+    restart: unless-stopped
+
   # App - Sentinela/Agentes (Telegram, SpecialistAgent, etc.)
   app:
     build:

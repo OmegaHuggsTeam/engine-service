@@ -1,0 +1,54 @@
+# LiteLLM Router — Model Configuration
+# Docs: https://docs.litellm.ai/docs/routing
+#
+# model_name agrupa modelos por tier:
+#   "fast"     → Groq (custo zero, alta velocidade)
+#   "standard" → GPT-4o-mini / Gemini Flash (custo controlado)
+#   "complex"  → Claude / GPT-4o (custo full, alta qualidade)
+#
+# api_key: "os.environ/VAR_NAME" → LiteLLM resolve automaticamente.
+
+model_list:
+  # ── Fast tier (Layer 1 — triage, queries simples) ──
+  - model_name: "fast"
+    litellm_params:
+      model: "groq/llama-3.3-70b-versatile"
+      api_key: "os.environ/GROQ_API_KEY"
+
+  - model_name: "fast"
+    litellm_params:
+      model: "groq/llama-3.1-8b-instant"
+      api_key: "os.environ/GROQ_KEY_2"
+
+  # ── Standard tier (Layer 2 — RAG, geracao, analise) ──
+  - model_name: "standard"
+    litellm_params:
+      model: "openai/gpt-4o-mini"
+      api_key: "os.environ/OPENAI_API_KEY"
+
+  - model_name: "standard"
+    litellm_params:
+      model: "gemini/gemini-1.5-flash"
+      api_key: "os.environ/GEMINI_API_KEY"
+
+  # ── Complex tier (Layer 3 — tarefas complexas, sintese) ──
+  - model_name: "complex"
+    litellm_params:
+      model: "anthropic/claude-sonnet-4-20250514"
+      api_key: "os.environ/ANTHROPIC_API_KEY"
+
+  - model_name: "complex"
+    litellm_params:
+      model: "openai/gpt-4o"
+      api_key: "os.environ/OPENAI_API_KEY"
+
+router_settings:
+  routing_strategy: "latency-based-routing"
+  num_retries: 3
+  retry_after: 5
+  timeout: 30
+  fallbacks:
+    - fast: ["standard"]
+    - standard: ["fast"]
+    - complex: ["standard"]
+  enable_pre_call_checks: true

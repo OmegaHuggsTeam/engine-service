@@ -1,0 +1,98 @@
+{
+  "name": "Engine Service - Dev Environment",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+
+  "forwardPorts": [8766, 8000, 7474, 7687, 5001, 6379],
+  "portsAttributes": {
+    "8766": {
+      "label": "Sovereign Gateway (API)",
+      "onAutoForward": "notify"
+    },
+    "8000": {
+      "label": "ChromaDB",
+      "onAutoForward": "silent"
+    },
+    "7474": {
+      "label": "Neo4j Browser",
+      "onAutoForward": "silent"
+    },
+    "7687": {
+      "label": "Neo4j Bolt",
+      "onAutoForward": "silent"
+    },
+    "5001": {
+      "label": "Docling Serve",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "postCreateCommand": "pip install -r requirements.txt && sudo apt-get update && sudo apt-get install -y chromium",
+  "postStartCommand": "echo '\\n========================================\\n  Engine Service - Ambiente pronto!\\n========================================\\n\\n  Para iniciar o gateway:\\n    python -m uvicorn app.main:app --port 8766 --reload\\n\\n  Para subir servicos auxiliares:\\n    docker compose up -d\\n\\n  Gateway:  http://localhost:8766\\n  Docs API: http://localhost:8766/docs\\n  ChromaDB: http://localhost:8000\\n  Neo4j:    http://localhost:7474\\n  Docling:  http://localhost:5001\\n\\n  Stack: Python 3.11 + FastAPI\\n  Pipeline: Layer 0-3 (Cache > Triage > RAG > LLM)\\n\\n  Docs do projeto: ver Wiki no GitHub\\n  Duvidas? Fale com @HuggsF no GitHub\\n========================================\\n'",
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.analysis.typeCheckingMode": "basic",
+        "python.analysis.autoImportCompletions": true,
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["tests"],
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.tabSize": 4
+        },
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.tabSize": 2
+        },
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.tabSize": 2
+        },
+        "files.eol": "\n"
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "ms-python.debugpy",
+        "eamodio.gitlens",
+        "rangav.vscode-thunder-client",
+        "usernamehw.errorlens",
+        "ms-azuretools.vscode-docker"
+      ]
+    },
+    "codespaces": {
+      "openFiles": [".devcontainer/README.md"]
+    }
+  },
+
+  "remoteEnv": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONUNBUFFERED": "1"
+  },
+
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  }
+}

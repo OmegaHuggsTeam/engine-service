@@ -6,7 +6,7 @@ with huggsai.tenant_id, huggsai.node_id, and huggsai.journey_id for filtering.
 
 Usage:
     orch = ContainerOrchestrator()
-    info = orch.spawn(ContainerConfig(image="huggsai/trigger:latest", ...))
+    info = orch.spawn(ContainerConfig(image="ghcr.io/omegahuggsteam/sandbox-trigger:latest", ...))
     metrics = orch.get_status(info.container_id)
     orch.stop(info.container_id)
 """
@@ -112,10 +112,9 @@ class ContainerOrchestrator:
             # CPU percentage
             cpu_stats = stats.get("cpu_stats", {})
             precpu_stats = stats.get("precpu_stats", {})
-            cpu_delta = (
-                cpu_stats.get("cpu_usage", {}).get("total_usage", 0)
-                - precpu_stats.get("cpu_usage", {}).get("total_usage", 0)
-            )
+            cpu_delta = cpu_stats.get("cpu_usage", {}).get("total_usage", 0) - precpu_stats.get(
+                "cpu_usage", {}
+            ).get("total_usage", 0)
             system_delta = cpu_stats.get("system_cpu_usage", 0) - precpu_stats.get(
                 "system_cpu_usage", 0
             )
@@ -295,9 +294,7 @@ class ContainerOrchestrator:
                         journey_id,
                     )
                 except Exception as exc:
-                    logger.warning(
-                        "cleanup_journey: failed to remove %s: %s", c.id[:12], exc
-                    )
+                    logger.warning("cleanup_journey: failed to remove %s: %s", c.id[:12], exc)
             return count
         except Exception as exc:
             logger.warning("cleanup_journey error: %s", exc)

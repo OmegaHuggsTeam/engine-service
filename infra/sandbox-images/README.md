@@ -8,12 +8,34 @@ Related: [INFRA-ES-001](https://github.com/OmegaHuggsTeam/engine-service/issues/
 
 | Image | Purpose | Extra Deps | Expected Size |
 |-------|---------|------------|---------------|
-| `huggsai/trigger` | Trigger node evaluation (manual, webhook, schedule) | None | ~55MB |
-| `huggsai/condition` | Boolean condition evaluation (field checks, expressions) | None | ~55MB |
-| `huggsai/action` | CRM action execution (tag, score, notify, webhook) | `httpx`, `curl` | ~75MB |
-| `huggsai/transform` | Data transformation (jmespath, jq, field mapping) | `jmespath`, `jq` | ~70MB |
+| `ghcr.io/omegahuggsteam/sandbox-trigger` | Trigger node evaluation (manual, webhook, schedule) | None | ~55MB |
+| `ghcr.io/omegahuggsteam/sandbox-condition` | Boolean condition evaluation (field checks, expressions) | None | ~55MB |
+| `ghcr.io/omegahuggsteam/sandbox-action` | CRM action execution (tag, score, notify, webhook) | `httpx`, `curl` | ~75MB |
+| `ghcr.io/omegahuggsteam/sandbox-transform` | Data transformation (jmespath, jq, field mapping) | `jmespath`, `jq` | ~70MB |
 
-## Build All Images
+## CI/CD — GitHub Packages (ghcr.io)
+
+Images are automatically built and pushed to GitHub Container Registry on every push to `main` or `develop` that modifies files under `infra/sandbox-images/`. The workflow can also be triggered manually via `workflow_dispatch`.
+
+**Workflow:** `.github/workflows/build-sandbox-images.yml`
+
+Pull pre-built images:
+
+```bash
+docker pull ghcr.io/omegahuggsteam/sandbox-trigger:latest
+docker pull ghcr.io/omegahuggsteam/sandbox-condition:latest
+docker pull ghcr.io/omegahuggsteam/sandbox-action:latest
+docker pull ghcr.io/omegahuggsteam/sandbox-transform:latest
+```
+
+Or pull all via compose:
+
+```bash
+cd infra/sandbox-images
+docker compose -f docker-compose.sandbox.yml pull
+```
+
+## Build All Images (local)
 
 ```bash
 cd infra/sandbox-images
@@ -23,10 +45,10 @@ docker compose -f docker-compose.sandbox.yml build
 Or build individually:
 
 ```bash
-docker build -t huggsai/trigger:latest trigger/
-docker build -t huggsai/condition:latest condition/
-docker build -t huggsai/action:latest action/
-docker build -t huggsai/transform:latest transform/
+docker build -t ghcr.io/omegahuggsteam/sandbox-trigger:latest trigger/
+docker build -t ghcr.io/omegahuggsteam/sandbox-condition:latest condition/
+docker build -t ghcr.io/omegahuggsteam/sandbox-action:latest action/
+docker build -t ghcr.io/omegahuggsteam/sandbox-transform:latest transform/
 ```
 
 ## Test All Images
@@ -52,25 +74,25 @@ Each container prints its result to stdout and writes to `/tmp/result.json`. Exp
 
 ```bash
 # Trigger
-docker run --rm -e NODE_SUBTYPE=manual huggsai/trigger:latest
+docker run --rm -e NODE_SUBTYPE=manual ghcr.io/omegahuggsteam/sandbox-trigger:latest
 
 # Condition (should return result=true since 75 >= 50)
 docker run --rm \
   -e NODE_SUBTYPE=field_check \
   -e NODE_CONFIG='{"field":"score","operator":"gte","value":50,"context":{"score":75}}' \
-  huggsai/condition:latest
+  ghcr.io/omegahuggsteam/sandbox-condition:latest
 
 # Action (dry-run mode without CRM_API_URL)
 docker run --rm \
   -e NODE_SUBTYPE=add_tag \
   -e NODE_CONFIG='{"payload":{"contact_id":"c1","tag":"vip"}}' \
-  huggsai/action:latest
+  ghcr.io/omegahuggsteam/sandbox-action:latest
 
 # Transform (jmespath filter)
 docker run --rm \
   -e NODE_SUBTYPE=jmespath \
   -e NODE_CONFIG='{"expression":"contacts[?score > `50`].name","data":{"contacts":[{"name":"Alice","score":80}]}}' \
-  huggsai/transform:latest
+  ghcr.io/omegahuggsteam/sandbox-transform:latest
 ```
 
 ## Security Model
@@ -124,7 +146,7 @@ The `ContainerOrchestrator` module (`src/neural_link/containers/orchestrator.py`
 
 ```python
 config = ContainerConfig(
-    image="huggsai/trigger:latest",
+    image="ghcr.io/omegahuggsteam/sandbox-trigger:latest",
     tenant_id="tenant-001",
     node_id="node-abc",
     memory_limit_mb=128,

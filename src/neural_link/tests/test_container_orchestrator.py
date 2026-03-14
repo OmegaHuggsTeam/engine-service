@@ -4,15 +4,15 @@ Uses unittest.mock to patch docker.from_env so no real Docker daemon is needed.
 Run: python -m pytest src/neural_link/tests/test_container_orchestrator.py -v
 """
 
-import time
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from src.neural_link.containers.models import (
     ContainerConfig,
+    ContainerExecResult,
     ContainerInfo,
     ContainerMetrics,
-    ContainerExecResult,
 )
 from src.neural_link.containers.orchestrator import ContainerOrchestrator
 
@@ -28,7 +28,7 @@ class TestContainerOrchestrator:
     # ------------------------------------------------------------------
     def test_spawn_container_returns_id(self):
         config = ContainerConfig(
-            image="huggsai/trigger:latest",
+            image="ghcr.io/omegahuggsteam/sandbox-trigger:latest",
             tenant_id="tenant-001",
             node_id="node-abc",
             memory_limit_mb=128,
@@ -38,7 +38,7 @@ class TestContainerOrchestrator:
             mock_container = MagicMock()
             mock_container.id = "abc123def456"
             mock_container.status = "running"
-            mock_container.image.tags = ["huggsai/trigger:latest"]
+            mock_container.image.tags = ["ghcr.io/omegahuggsteam/sandbox-trigger:latest"]
             mock_docker.return_value.containers.run.return_value = mock_container
 
             result = self.orch.spawn(config)
@@ -48,7 +48,7 @@ class TestContainerOrchestrator:
         assert result.status == "running"
         assert result.node_id == "node-abc"
         assert result.tenant_id == "tenant-001"
-        assert result.image == "huggsai/trigger:latest"
+        assert result.image == "ghcr.io/omegahuggsteam/sandbox-trigger:latest"
 
         # Verify Docker SDK was called with correct labels
         call_kwargs = mock_docker.return_value.containers.run.call_args
@@ -124,7 +124,7 @@ class TestContainerOrchestrator:
                 "huggsai.journey_id": "journey-x",
             }
             mock_c1.status = "running"
-            mock_c1.image.tags = ["huggsai/trigger:latest"]
+            mock_c1.image.tags = ["ghcr.io/omegahuggsteam/sandbox-trigger:latest"]
 
             mock_c2 = MagicMock()
             mock_c2.id = "container-002"
@@ -134,7 +134,7 @@ class TestContainerOrchestrator:
                 "huggsai.journey_id": "",
             }
             mock_c2.status = "exited"
-            mock_c2.image.tags = ["huggsai/action-crm:latest"]
+            mock_c2.image.tags = ["ghcr.io/omegahuggsteam/sandbox-action:latest"]
 
             mock_docker.return_value.containers.list.return_value = [mock_c1, mock_c2]
 
@@ -218,7 +218,7 @@ class TestContainerOrchestrator:
     # ------------------------------------------------------------------
     def test_spawn_with_journey_id(self):
         config = ContainerConfig(
-            image="huggsai/condition:latest",
+            image="ghcr.io/omegahuggsteam/sandbox-condition:latest",
             tenant_id="tenant-002",
             node_id="node-cond",
             journey_id="journey-xyz",
@@ -232,7 +232,7 @@ class TestContainerOrchestrator:
             mock_container = MagicMock()
             mock_container.id = "cond-container-id"
             mock_container.status = "running"
-            mock_container.image.tags = ["huggsai/condition:latest"]
+            mock_container.image.tags = ["ghcr.io/omegahuggsteam/sandbox-condition:latest"]
             mock_docker.return_value.containers.run.return_value = mock_container
 
             result = self.orch.spawn(config)

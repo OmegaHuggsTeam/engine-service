@@ -9,11 +9,13 @@ Subsistemas:
 
 import asyncio
 import ctypes
-import ctypes.wintypes
 import json
 import logging
 import sys
 import time
+
+if sys.platform == "win32":
+    import ctypes.wintypes
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -50,6 +52,9 @@ class MonitorInfo:
 
 def detect_monitors() -> list[MonitorInfo]:
     """Detecta monitores via Win32 EnumDisplayMonitors."""
+    if sys.platform != "win32":
+        return []
+
     monitors: list[MonitorInfo] = []
 
     def _callback(hMonitor, hdcMonitor, lprcMonitor, dwData):

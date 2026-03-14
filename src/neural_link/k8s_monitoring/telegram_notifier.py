@@ -379,9 +379,12 @@ class TelegramNotifier:
             extra={"queue_size": len(self.message_queue)},
         )
 
-        while self.message_queue:
-            message = self.message_queue.popleft()
+        # Drain queue into snapshot to prevent infinite loop
+        # (_send_with_retry re-queues on final failure)
+        batch = list(self.message_queue)
+        self.message_queue.clear()
 
+        for message in batch:
             success = self._send_with_retry(
                 chat_id=message["chat_id"],
                 text=message["text"],
@@ -392,12 +395,7 @@ class TelegramNotifier:
             if success:
                 sent_count += 1
             else:
-                # Re-queue failed message
                 failed_messages.append(message)
-
-        # Re-add failed messages to queue
-        for msg in failed_messages:
-            self.message_queue.append(msg)
 
         logger.info(
             "Queue processing complete",

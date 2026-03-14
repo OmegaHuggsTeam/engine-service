@@ -108,7 +108,7 @@ class TestRouting:
         assert resp.complexity == TaskComplexity.REPETITIVE
         assert resp.confidence == 0.95
         assert resp.result == {"status": "all_ok", "pending": 0}
-        assert resp.model_used == "llama3-70b-8192"
+        assert resp.model_used == "llama-3.1-8b-instant"
         mock_chat.assert_called_once()
 
     @patch("src.utils.llm_client.chat_completion")

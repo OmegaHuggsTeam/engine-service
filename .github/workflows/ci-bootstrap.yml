@@ -1,10 +1,12 @@
 name: CI Bootstrap
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'run_init.py'
       - 'requirements*.txt'
+      - '.github/workflows/ci-bootstrap.yml'
   pull_request:
     paths:
       - 'run_init.py'
@@ -30,14 +32,15 @@ jobs:
 
       - name: Validate core imports
         run: |
-          python -c "from src.utils.llm_client import LLMClient; print('LLMClient OK')"
+          python -c "from src.utils.llm_client import KeyManager; print('KeyManager OK')"
           python -c "from src.agents.agent_factory import AgentFactory; print('AgentFactory OK')"
           python -c "from src.neural_link.api.sovereign_gateway import app; print('Gateway OK')"
 
       - name: Basic run_init parsing
-        run: python -c "
+        run: |
+          python -c "
           import ast
           with open('run_init.py') as f:
               ast.parse(f.read())
           print('run_init.py syntax OK')
-        "
+          "

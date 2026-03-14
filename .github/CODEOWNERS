@@ -1,34 +1,3 @@
-# Engine Service — Code Ownership
-# Cada PR precisa de review dos owners da area afetada
-
-# Default — Core (Hugo + Henrique)
-* @OmegaHuggsTeam/core
-
-# Neural Link (pipeline, agents, RAG) — Data-AI + Engineering
-src/neural_link/ @OmegaHuggsTeam/data-ai @OmegaHuggsTeam/engineering
-
-# Sovereign Gateway API — Engineering (Rodolfo review obrigatorio)
-src/neural_link/api/ @OmegaHuggsTeam/engineering @OmegaHuggsTeam/qa-review
-
-# Graph & Database — Data-AI
-src/neural_link/graph/ @OmegaHuggsTeam/data-ai
-
-# Agents — Core + Data-AI
-src/neural_link/agents/ @OmegaHuggsTeam/core @OmegaHuggsTeam/data-ai
-src/neural_link/orchestrator/ @OmegaHuggsTeam/core
-
-# Frontend (Next.js dashboard) — Engineering
-frontend/ @OmegaHuggsTeam/engineering
-
-# Tests — QA-Review
-tests/ @OmegaHuggsTeam/qa-review
-
-# CI/CD & Infra — Core only
-.github/ @OmegaHuggsTeam/core
-docker* @OmegaHuggsTeam/core
-Makefile @OmegaHuggsTeam/core
-infra/ @OmegaHuggsTeam/core
-
-# Configs — Core
-*.config.* @OmegaHuggsTeam/core
-CLAUDE.md @HuggsF
+* @HuggsF
+src/neural_link/ @HuggsF
+frontend/ @HuggsF

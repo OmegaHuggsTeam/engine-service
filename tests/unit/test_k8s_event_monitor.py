@@ -2,7 +2,7 @@
 
 import threading
 import time
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from kubernetes.client import V1ObjectMeta, V1Pod
@@ -38,9 +38,7 @@ class TestK8sEventMonitorInit:
         """Test initialization with explicit kubeconfig path."""
         monitor = K8sEventMonitor(kubeconfig_path="/path/to/kubeconfig")
 
-        mock_kube_config.load_kube_config.assert_called_once_with(
-            config_file="/path/to/kubeconfig"
-        )
+        mock_kube_config.load_kube_config.assert_called_once_with(config_file="/path/to/kubeconfig")
         assert monitor.hooks == []
         assert monitor.running is False
 
@@ -52,14 +50,13 @@ class TestK8sEventMonitorInit:
         assert monitor.hooks == []
         assert monitor.running is False
 
-    def test_init_fallback_to_default_config(
-        self, mock_kube_config, mock_kube_client
-    ):
+    def test_init_fallback_to_default_config(self, mock_kube_config, mock_kube_client):
         """Test fallback to default kubeconfig when in-cluster fails."""
+
         # Create a proper ConfigException class
         class ConfigException(Exception):
             pass
-        
+
         mock_kube_config.ConfigException = ConfigException
         mock_kube_config.load_incluster_config.side_effect = ConfigException("Not in cluster")
 
@@ -134,18 +131,16 @@ class TestK8sEventMonitorStartStop:
 
             assert monitor.running is True
             assert monitor._watch_thread is not None
-            
+
             # Give thread a moment to start
             time.sleep(0.1)
-            
+
             # Verify thread was created (may have already finished if mock returns immediately)
             assert mock_loop.called
 
             monitor.stop()
 
-    def test_start_when_already_running(
-        self, mock_kube_config, mock_kube_client, mock_watch
-    ):
+    def test_start_when_already_running(self, mock_kube_config, mock_kube_client, mock_watch):
         """Test that starting when already running logs warning."""
         monitor = K8sEventMonitor()
 
@@ -202,9 +197,7 @@ class TestK8sEventMonitorEventMatching:
 
         assert monitor._match_event(event, hook) is True
 
-    def test_match_event_wrong_resource_type(
-        self, mock_kube_config, mock_kube_client
-    ):
+    def test_match_event_wrong_resource_type(self, mock_kube_config, mock_kube_client):
         """Test non-matching resource type."""
         monitor = K8sEventMonitor()
 
@@ -376,9 +369,7 @@ class TestK8sEventMonitorEventDispatch:
         # Should not raise exception
         monitor._dispatch_event(event, hook)
 
-    def test_dispatch_event_calls_registered_handler(
-        self, mock_kube_config, mock_kube_client
-    ):
+    def test_dispatch_event_calls_registered_handler(self, mock_kube_config, mock_kube_client):
         """Test that registered handler is actually called."""
         monitor = K8sEventMonitor()
 
@@ -404,9 +395,7 @@ class TestK8sEventMonitorEventDispatch:
         # Verify handler was called with correct arguments
         mock_handler.assert_called_once_with(event, hook)
 
-    def test_dispatch_event_handler_exception(
-        self, mock_kube_config, mock_kube_client
-    ):
+    def test_dispatch_event_handler_exception(self, mock_kube_config, mock_kube_client):
         """Test that handler exceptions are caught and logged."""
         monitor = K8sEventMonitor()
 
@@ -461,9 +450,7 @@ class TestK8sEventMonitorFilterEvaluation:
 
         assert monitor._match_event(event, hook) is True
 
-    def test_match_event_with_filter_mismatch(
-        self, mock_kube_config, mock_kube_client
-    ):
+    def test_match_event_with_filter_mismatch(self, mock_kube_config, mock_kube_client):
         """Test non-matching filter."""
         monitor = K8sEventMonitor()
 
@@ -505,16 +492,14 @@ class TestK8sEventMonitorFilterEvaluation:
         # Use a real object instead of Mock to test missing attributes
         class TestObj:
             def __init__(self):
-                self.status = type('obj', (object,), {})()
+                self.status = type("obj", (object,), {})()
 
         obj = TestObj()
 
         value = monitor._get_nested_value(obj, "status.nonexistent")
         assert value is None
 
-    def test_get_nested_value_with_array_wildcard(
-        self, mock_kube_config, mock_kube_client
-    ):
+    def test_get_nested_value_with_array_wildcard(self, mock_kube_config, mock_kube_client):
         """Test getting nested value with array wildcard."""
         monitor = K8sEventMonitor()
 
@@ -566,9 +551,7 @@ class TestK8sEventMonitorHandlerRegistration:
 class TestK8sEventMonitorResourceTypes:
     """Tests for resource type extraction."""
 
-    def test_get_resource_types_from_hooks(
-        self, mock_kube_config, mock_kube_client
-    ):
+    def test_get_resource_types_from_hooks(self, mock_kube_config, mock_kube_client):
         """Test extracting resource types from hooks."""
         monitor = K8sEventMonitor()
 
@@ -585,9 +568,7 @@ class TestK8sEventMonitorResourceTypes:
         assert "Pod" in resource_types
         assert "Service" in resource_types
 
-    def test_get_resource_types_empty_hooks(
-        self, mock_kube_config, mock_kube_client
-    ):
+    def test_get_resource_types_empty_hooks(self, mock_kube_config, mock_kube_client):
         """Test extracting resource types from empty hooks."""
         monitor = K8sEventMonitor()
         monitor.register_hooks([])
@@ -603,7 +584,7 @@ class TestK8sEventMonitorReconnection:
         """Test that reconnection uses exponential backoff timing."""
         monitor = K8sEventMonitor()
         monitor.register_hooks([])
-        
+
         # Mock the watch stream to fail multiple times
         api_exception = Exception("Connection failed")
         mock_watch.Watch.return_value.stream.side_effect = [
@@ -611,26 +592,26 @@ class TestK8sEventMonitorReconnection:
             api_exception,
             api_exception,
         ]
-        
+
         # Track sleep calls to verify exponential backoff
         sleep_calls = []
-        
+
         def mock_wait(timeout):
             sleep_calls.append(timeout)
             # Stop after 3 failures
             if len(sleep_calls) >= 3:
                 monitor.running = False
             return False  # Don't actually sleep
-        
+
         monitor._stop_event.wait = mock_wait
-        
+
         # Start the monitor
         monitor.start()
-        
+
         # Wait for thread to complete
         if monitor._watch_thread:
             monitor._watch_thread.join(timeout=2.0)
-        
+
         # Verify exponential backoff: 30s, 60s, 120s
         assert len(sleep_calls) >= 3
         assert sleep_calls[0] == 30  # First retry: base delay
@@ -641,27 +622,27 @@ class TestK8sEventMonitorReconnection:
         """Test that reconnection delay caps at maximum value."""
         monitor = K8sEventMonitor()
         monitor.register_hooks([])
-        
+
         # Mock the watch stream to fail many times
         api_exception = Exception("Connection failed")
         mock_watch.Watch.return_value.stream.side_effect = [api_exception] * 10
-        
+
         sleep_calls = []
-        
+
         def mock_wait(timeout):
             sleep_calls.append(timeout)
             # Stop after 6 failures (should hit max delay)
             if len(sleep_calls) >= 6:
                 monitor.running = False
             return False
-        
+
         monitor._stop_event.wait = mock_wait
-        
+
         monitor.start()
-        
+
         if monitor._watch_thread:
             monitor._watch_thread.join(timeout=2.0)
-        
+
         # Verify that delay caps at 300 seconds (max_reconnect_delay)
         # Progression: 30, 60, 120, 240, 300, 300
         assert len(sleep_calls) >= 5
@@ -669,69 +650,79 @@ class TestK8sEventMonitorReconnection:
         if len(sleep_calls) >= 6:
             assert sleep_calls[5] == 300  # Should remain capped
 
-    def test_connection_recovery_after_failure(self, mock_kube_config, mock_kube_client, mock_watch):
+    def test_connection_recovery_after_failure(
+        self, mock_kube_config, mock_kube_client, mock_watch
+    ):
         """Test that connection recovers after temporary failure."""
         monitor = K8sEventMonitor()
         monitor.register_hooks([])
-        
+
         # Mock the watch stream to fail once, then succeed
         api_exception = Exception("Temporary connection failure")
-        
+
         # Create a mock event generator that yields one event
         def mock_event_generator():
-            yield {"type": "ADDED", "object": V1Pod(
-                kind="Pod",
-                metadata=V1ObjectMeta(name="test-pod", namespace="default")
-            )}
+            yield {
+                "type": "ADDED",
+                "object": V1Pod(
+                    kind="Pod", metadata=V1ObjectMeta(name="test-pod", namespace="default")
+                ),
+            }
             # After yielding one event, stop the monitor
             monitor.running = False
-        
+
         mock_watch.Watch.return_value.stream.side_effect = [
             api_exception,  # First attempt fails
             mock_event_generator(),  # Second attempt succeeds
         ]
-        
+
         sleep_calls = []
-        
+
         def mock_wait(timeout):
             sleep_calls.append(timeout)
             return False  # Don't actually sleep
-        
+
         monitor._stop_event.wait = mock_wait
-        
+
         monitor.start()
-        
+
         if monitor._watch_thread:
             monitor._watch_thread.join(timeout=2.0)
-        
+
         # Verify that reconnection was attempted
         assert len(sleep_calls) >= 1
         assert sleep_calls[0] == 30  # First retry after failure
-        
+
         # Verify that stream was called twice (initial + retry)
         assert mock_watch.Watch.return_value.stream.call_count == 2
 
-    def test_reconnection_resets_delay_on_success(self, mock_kube_config, mock_kube_client, mock_watch):
+    def test_reconnection_resets_delay_on_success(
+        self, mock_kube_config, mock_kube_client, mock_watch
+    ):
         """Test that reconnection delay resets after successful connection."""
         monitor = K8sEventMonitor()
         monitor.register_hooks([])
-        
+
         api_exception = Exception("Connection failed")
-        
+
         # Create event generators
         def success_generator_1():
-            yield {"type": "ADDED", "object": V1Pod(
-                kind="Pod",
-                metadata=V1ObjectMeta(name="pod-1", namespace="default")
-            )}
-        
+            yield {
+                "type": "ADDED",
+                "object": V1Pod(
+                    kind="Pod", metadata=V1ObjectMeta(name="pod-1", namespace="default")
+                ),
+            }
+
         def success_generator_2():
-            yield {"type": "ADDED", "object": V1Pod(
-                kind="Pod",
-                metadata=V1ObjectMeta(name="pod-2", namespace="default")
-            )}
+            yield {
+                "type": "ADDED",
+                "object": V1Pod(
+                    kind="Pod", metadata=V1ObjectMeta(name="pod-2", namespace="default")
+                ),
+            }
             monitor.running = False
-        
+
         # Fail twice, succeed, fail once more, succeed again
         mock_watch.Watch.return_value.stream.side_effect = [
             api_exception,  # Fail
@@ -740,20 +731,20 @@ class TestK8sEventMonitorReconnection:
             api_exception,  # Fail after success
             success_generator_2(),  # Success again
         ]
-        
+
         sleep_calls = []
-        
+
         def mock_wait(timeout):
             sleep_calls.append(timeout)
             return False
-        
+
         monitor._stop_event.wait = mock_wait
-        
+
         monitor.start()
-        
+
         if monitor._watch_thread:
             monitor._watch_thread.join(timeout=2.0)
-        
+
         # Verify exponential backoff for first two failures: 30s, 60s
         assert len(sleep_calls) >= 3
         assert sleep_calls[0] == 30  # First failure
@@ -764,32 +755,32 @@ class TestK8sEventMonitorReconnection:
     def test_api_exception_handling(self, mock_kube_config, mock_kube_client, mock_watch):
         """Test handling of Kubernetes API exceptions during reconnection."""
         from kubernetes.client.rest import ApiException
-        
+
         monitor = K8sEventMonitor()
         monitor.register_hooks([])
-        
+
         # Create an ApiException
         api_exception = ApiException(status=503, reason="Service Unavailable")
         mock_watch.Watch.return_value.stream.side_effect = [
             api_exception,
             api_exception,
         ]
-        
+
         sleep_calls = []
-        
+
         def mock_wait(timeout):
             sleep_calls.append(timeout)
             if len(sleep_calls) >= 2:
                 monitor.running = False
             return False
-        
+
         monitor._stop_event.wait = mock_wait
-        
+
         monitor.start()
-        
+
         if monitor._watch_thread:
             monitor._watch_thread.join(timeout=2.0)
-        
+
         # Verify that ApiException is handled and reconnection is attempted
         assert len(sleep_calls) >= 2
         assert sleep_calls[0] == 30
@@ -799,29 +790,29 @@ class TestK8sEventMonitorReconnection:
         """Test that stop() interrupts reconnection wait."""
         monitor = K8sEventMonitor()
         monitor.register_hooks([])
-        
+
         api_exception = Exception("Connection failed")
         mock_watch.Watch.return_value.stream.side_effect = api_exception
-        
+
         # Track if wait was called
         wait_called = threading.Event()
         original_wait = monitor._stop_event.wait
-        
+
         def mock_wait(timeout):
             wait_called.set()
             # Call original wait which will return True when stop is called
             return original_wait(timeout)
-        
+
         monitor._stop_event.wait = mock_wait
-        
+
         monitor.start()
-        
+
         # Wait for the watch loop to enter reconnection wait
         wait_called.wait(timeout=1.0)
-        
+
         # Now stop the monitor
         monitor.stop()
-        
+
         # Thread should exit quickly (not wait full reconnection delay)
         if monitor._watch_thread:
             monitor._watch_thread.join(timeout=1.0)

@@ -9,7 +9,7 @@ Envia payload para webhook n8n para feedback loop (botão Aprovar Correção no 
 import logging
 import os
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
@@ -143,7 +143,7 @@ class PodStatusMonitor:
                     container_name = getattr(cs, "name", None)
                     message = getattr(waiting, "message", None)
                     restart_count = getattr(cs, "restartCount", 0)
-                    
+
                     # Extract last terminated state
                     last_terminated = getattr(cs, "lastState", None)
                     if last_terminated:
@@ -187,20 +187,26 @@ class PodStatusMonitor:
         try:
             logs = ""
             if self._log_analyzer and hasattr(self._log_analyzer, "get_pod_logs"):
-                logs = self._log_analyzer.get_pod_logs(
-                    failure.pod_name,
-                    failure.namespace,
-                    tail_lines=50,
-                    container=failure.container_name,
-                ) or ""
+                logs = (
+                    self._log_analyzer.get_pod_logs(
+                        failure.pod_name,
+                        failure.namespace,
+                        tail_lines=50,
+                        container=failure.container_name,
+                    )
+                    or ""
+                )
 
             suggestion = ""
             if self._specialist_agent and hasattr(self._specialist_agent, "analyze_pod_logs"):
-                suggestion = self._specialist_agent.analyze_pod_logs(
-                    logs,
-                    pod_name=failure.pod_name,
-                    namespace=failure.namespace,
-                ) or ""
+                suggestion = (
+                    self._specialist_agent.analyze_pod_logs(
+                        logs,
+                        pod_name=failure.pod_name,
+                        namespace=failure.namespace,
+                    )
+                    or ""
+                )
 
             if self._notifier and hasattr(self._notifier, "send_pod_failure_alert"):
                 self._notifier.send_pod_failure_alert(
@@ -227,6 +233,7 @@ class PodStatusMonitor:
             return
         try:
             import httpx
+
             payload = {
                 "pod_name": failure.pod_name,
                 "namespace": failure.namespace,

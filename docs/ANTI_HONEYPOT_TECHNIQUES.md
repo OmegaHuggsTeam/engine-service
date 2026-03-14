@@ -71,8 +71,8 @@ Busca elemento usando `document.evaluate` (XPath via JavaScript).
 **Uso:**
 ```python
 element_info = _find_element_by_text_js(
-    driver, 
-    "Inteligencias Do Pai", 
+    driver,
+    "Inteligencias Do Pai",
     tag="a",
     case_sensitive=False
 )
@@ -335,12 +335,12 @@ Se pyautogui não funcionar:
 
 ### O Que Foi Implementado
 
-✅ Detecção de overlays invisíveis  
-✅ Busca via JavaScript (document.evaluate)  
-✅ Clique com mouse físico (pyautogui)  
-✅ Refresh de DOM após 2FA  
-✅ Diagnóstico detalhado com screenshots  
-✅ Múltiplos fallbacks  
+✅ Detecção de overlays invisíveis
+✅ Busca via JavaScript (document.evaluate)
+✅ Clique com mouse físico (pyautogui)
+✅ Refresh de DOM após 2FA
+✅ Diagnóstico detalhado com screenshots
+✅ Múltiplos fallbacks
 
 ### Resultado Esperado
 
@@ -361,6 +361,6 @@ Se ainda falhar, verifique:
 
 ---
 
-**Última atualização:** 2024-XX-XX  
-**Autor:** Hugo (Planejamento) + Kiro (Implementação)  
+**Última atualização:** 2024-XX-XX
+**Autor:** Hugo (Planejamento) + Kiro (Implementação)
 **Status:** ✅ Implementado e testado

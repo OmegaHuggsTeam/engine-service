@@ -4,37 +4,36 @@ Configuration management for Sentinela Monitor.
 
 import os
 from dataclasses import dataclass
-from pathlib import Path
 
 
 @dataclass
 class SentinelaConfig:
     """System configuration for Sentinela Monitor."""
-    
+
     # Neo4j monitoring
     neo4j_log_path: str = ""
     poll_interval: float = 2.0
-    
+
     # Visual detection
     templates_dir: str = "./templates"
     confidence_threshold: float = 0.85
-    
+
     # Jitbit automation
     jitbit_path: str = "C:/Program Files/Jitbit/jitbit.exe"
     macros_dir: str = "./macros"
-    
+
     # Dashboard
     dashboard_url: str = "http://localhost:3000"
     page_load_timeout: float = 30.0
     screenshot_interval: float = 0.5
-    
+
     # Error handling
     max_retries: int = 3
     retry_delay: float = 5.0
-    
+
     # Logging
     log_level: str = "INFO"
-    
+
     @classmethod
     def from_env(cls) -> "SentinelaConfig":
         """Load configuration from environment variables."""

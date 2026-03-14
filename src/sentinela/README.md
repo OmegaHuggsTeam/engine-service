@@ -32,10 +32,10 @@ analyzer = ScreenshotAnalyzer(telemetry_hub=hub)
 try:
     screenshot = analyzer.capture_screenshot()
     gray = analyzer.to_grayscale(screenshot)
-    
+
     # Template matching
     confidence, x, y = analyzer.match_template(gray, template)
-    
+
 except CatarataError as e:
     print(f"Visão comprometida: {e}")
     # Erro já foi reportado ao TelemetryHub

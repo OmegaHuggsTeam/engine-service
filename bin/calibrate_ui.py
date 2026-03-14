@@ -5,7 +5,7 @@ Permite que o usuário clique em elementos para registrar suas coordenadas.
 
 Uso:
     python bin/calibrate_ui.py
-    
+
 Instruções:
     1. O script mostrará a posição do mouse em tempo real
     2. Posicione o mouse sobre o elemento desejado
@@ -13,10 +13,10 @@ Instruções:
     4. Pressione ESC para finalizar
 """
 
-import sys
 import json
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
 
 try:
     import pyautogui
@@ -29,50 +29,54 @@ except ImportError as e:
 
 class UICalibrator:
     """Ferramenta de calibração de coordenadas da UI."""
-    
+
     def __init__(self, ui_map_path: str = "specs/ui_map.json"):
         self.ui_map_path = Path(ui_map_path)
         self.calibration_points = []
         self.running = True
-        
+
         # Carregar mapa existente
         if self.ui_map_path.exists():
-            with open(self.ui_map_path, 'r', encoding='utf-8') as f:
+            with open(self.ui_map_path, "r", encoding="utf-8") as f:
                 self.ui_map = json.load(f)
         else:
             print(f"⚠️  Mapa UI não encontrado: {self.ui_map_path}")
             self.ui_map = {}
-    
+
     def on_press(self, key):
         """Handler para teclas pressionadas."""
         try:
             if key == keyboard.Key.space:
                 # Registrar coordenada atual
                 x, y = pyautogui.position()
-                
-                element_name = input(f"\n📍 Coordenada capturada: ({x}, {y})\n   Nome do elemento: ")
-                
+
+                element_name = input(
+                    f"\n📍 Coordenada capturada: ({x}, {y})\n   Nome do elemento: "
+                )
+
                 if element_name:
-                    self.calibration_points.append({
-                        "name": element_name,
-                        "x": x,
-                        "y": y,
-                        "timestamp": datetime.now().isoformat()
-                    })
+                    self.calibration_points.append(
+                        {
+                            "name": element_name,
+                            "x": x,
+                            "y": y,
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
                     print(f"✓ '{element_name}' registrado em ({x}, {y})")
-                
+
                 print("\n[ESPAÇO] Capturar | [ESC] Finalizar")
-                print("Posição do mouse: ", end='', flush=True)
-            
+                print("Posição do mouse: ", end="", flush=True)
+
             elif key == keyboard.Key.esc:
                 # Finalizar calibração
                 print("\n\n🛑 Finalizando calibração...")
                 self.running = False
                 return False  # Para o listener
-                
+
         except Exception as e:
             print(f"\n❌ Erro: {e}")
-    
+
     def run(self):
         """Executar calibração interativa."""
         print("=" * 60)
@@ -92,75 +96,73 @@ class UICalibrator:
         print()
         print("[ESPAÇO] Capturar | [ESC] Finalizar")
         print()
-        print("Posição do mouse: ", end='', flush=True)
-        
+        print("Posição do mouse: ", end="", flush=True)
+
         # Mostrar posição do mouse em tempo real
         try:
             with keyboard.Listener(on_press=self.on_press) as listener:
                 while self.running:
                     x, y = pyautogui.position()
-                    print(f"\rPosição do mouse: ({x:4d}, {y:4d})", end='', flush=True)
-                    
+                    print(f"\rPosição do mouse: ({x:4d}, {y:4d})", end="", flush=True)
+
                     import time
+
                     time.sleep(0.1)
-                
+
                 listener.join()
-        
+
         except KeyboardInterrupt:
             print("\n\n🛑 Calibração interrompida")
-        
+
         # Salvar resultados
         if self.calibration_points:
             self.save_calibration()
         else:
             print("\n⚠️  Nenhum ponto calibrado")
-    
+
     def save_calibration(self):
         """Salvar pontos calibrados no mapa UI."""
         print(f"\n\n💾 Salvando {len(self.calibration_points)} pontos calibrados...")
-        
+
         # Atualizar mapa UI
-        if 'elements' not in self.ui_map:
-            self.ui_map['elements'] = {}
-        
+        if "elements" not in self.ui_map:
+            self.ui_map["elements"] = {}
+
         for point in self.calibration_points:
-            element_key = point['name'].lower().replace(' ', '_')
-            
-            self.ui_map['elements'][element_key] = {
-                "name": point['name'],
-                "coordinates": {
-                    "x": point['x'],
-                    "y": point['y']
-                },
-                "calibrated_at": point['timestamp'],
+            element_key = point["name"].lower().replace(" ", "_")
+
+            self.ui_map["elements"][element_key] = {
+                "name": point["name"],
+                "coordinates": {"x": point["x"], "y": point["y"]},
+                "calibrated_at": point["timestamp"],
                 "confidence_required": 0.80,
-                "safe_zone": True
+                "safe_zone": True,
             }
-            
+
             print(f"  ✓ {point['name']}: ({point['x']}, {point['y']})")
-        
+
         # Atualizar metadados de calibração
-        if 'calibration' not in self.ui_map:
-            self.ui_map['calibration'] = {}
-        
-        self.ui_map['calibration']['last_calibrated'] = datetime.now().isoformat()
-        self.ui_map['calibration']['calibration_required'] = False
-        self.ui_map['calibration']['points_calibrated'] = len(self.calibration_points)
-        
+        if "calibration" not in self.ui_map:
+            self.ui_map["calibration"] = {}
+
+        self.ui_map["calibration"]["last_calibrated"] = datetime.now().isoformat()
+        self.ui_map["calibration"]["calibration_required"] = False
+        self.ui_map["calibration"]["points_calibrated"] = len(self.calibration_points)
+
         # Salvar arquivo
         self.ui_map_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        with open(self.ui_map_path, 'w', encoding='utf-8') as f:
+
+        with open(self.ui_map_path, "w", encoding="utf-8") as f:
             json.dump(self.ui_map, f, indent=2, ensure_ascii=False)
-        
+
         print(f"\n✅ Calibração salva em: {self.ui_map_path}")
         print(f"   Total de elementos: {len(self.ui_map.get('elements', {}))}")
-        
+
         # Criar backup
-        backup_path = self.ui_map_path.with_suffix('.backup.json')
-        with open(backup_path, 'w', encoding='utf-8') as f:
+        backup_path = self.ui_map_path.with_suffix(".backup.json")
+        with open(backup_path, "w", encoding="utf-8") as f:
             json.dump(self.ui_map, f, indent=2, ensure_ascii=False)
-        
+
         print(f"   Backup criado: {backup_path}")
 
 

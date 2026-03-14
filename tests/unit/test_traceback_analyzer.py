@@ -2,11 +2,11 @@
 Unit tests for TracebackAnalyzer module.
 """
 
-import sys
 import os
+import sys
 
 # Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from agents.traceback_analyzer import TracebackAnalyzer
 
@@ -22,7 +22,7 @@ def test_extract_library_from_selenium_traceback():
     self.error_handler.check_response(response)
 selenium.common.exceptions.NoSuchElementException: Message: no such element: Unable to locate element
 """
-    
+
     library_name = TracebackAnalyzer.extract_library_name(traceback_str)
     assert library_name == "selenium", f"Expected 'selenium', got '{library_name}'"
 
@@ -38,7 +38,7 @@ def test_extract_library_from_beautifulsoup_traceback():
     self.builder.feed(self.markup)
 bs4.FeatureNotFound: Couldn't find a tree builder with the features you requested
 """
-    
+
     library_name = TracebackAnalyzer.extract_library_name(traceback_str)
     assert library_name == "bs4", f"Expected 'bs4', got '{library_name}'"
 
@@ -54,7 +54,7 @@ def test_extract_deepest_library():
     raise ConnectionError()
 urllib3.exceptions.ConnectionError: Failed to connect
 """
-    
+
     library_name = TracebackAnalyzer.extract_library_name(traceback_str)
     # Should return the deepest library (urllib3), not the first one (requests)
     assert library_name == "urllib3", f"Expected 'urllib3', got '{library_name}'"
@@ -76,7 +76,7 @@ def test_stdlib_only_traceback_returns_none():
     obj, end = self.raw_decode(s, idx=_w(s, 0).end())
 json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
 """
-    
+
     library_name = TracebackAnalyzer.extract_library_name(traceback_str)
     assert library_name is None, f"Expected None for stdlib-only traceback, got '{library_name}'"
 
@@ -86,14 +86,14 @@ def test_normalize_library_name():
     # Test lowercase conversion
     assert TracebackAnalyzer._normalize_library_name("Selenium") == "selenium"
     assert TracebackAnalyzer._normalize_library_name("BeautifulSoup4") == "beautifulsoup4"
-    
+
     # Test underscore to hyphen conversion
     assert TracebackAnalyzer._normalize_library_name("some_library") == "some-library"
     assert TracebackAnalyzer._normalize_library_name("my_test_lib") == "my-test-lib"
-    
+
     # Test version number removal
     assert TracebackAnalyzer._normalize_library_name("requests-2.28.0") == "requests"
-    
+
     # Test combined transformations
     assert TracebackAnalyzer._normalize_library_name("My_Library-1.0.0") == "my-library"
 
@@ -105,7 +105,7 @@ def test_is_stdlib_module():
     assert TracebackAnalyzer._is_stdlib_module("os") is True
     assert TracebackAnalyzer._is_stdlib_module("sys") is True
     assert TracebackAnalyzer._is_stdlib_module("datetime") is True
-    
+
     # Test non-stdlib modules
     assert TracebackAnalyzer._is_stdlib_module("selenium") is False
     assert TracebackAnalyzer._is_stdlib_module("requests") is False
@@ -118,7 +118,7 @@ def test_malformed_traceback_returns_none():
 Just some random text
 No file paths here
 """
-    
+
     library_name = TracebackAnalyzer.extract_library_name(malformed_traceback)
     assert library_name is None, f"Expected None for malformed traceback, got '{library_name}'"
 
@@ -132,39 +132,39 @@ def test_windows_path_format():
     return self.execute(Command.FIND_ELEMENT, {
 selenium.common.exceptions.NoSuchElementException: Message: no such element
 """
-    
+
     library_name = TracebackAnalyzer.extract_library_name(traceback_str)
     assert library_name == "selenium", f"Expected 'selenium', got '{library_name}'"
 
 
 if __name__ == "__main__":
     print("Running TracebackAnalyzer tests...")
-    
+
     test_extract_library_from_selenium_traceback()
     print("✓ test_extract_library_from_selenium_traceback passed")
-    
+
     test_extract_library_from_beautifulsoup_traceback()
     print("✓ test_extract_library_from_beautifulsoup_traceback passed")
-    
+
     test_extract_deepest_library()
     print("✓ test_extract_deepest_library passed")
-    
+
     test_empty_traceback_returns_none()
     print("✓ test_empty_traceback_returns_none passed")
-    
+
     test_stdlib_only_traceback_returns_none()
     print("✓ test_stdlib_only_traceback_returns_none passed")
-    
+
     test_normalize_library_name()
     print("✓ test_normalize_library_name passed")
-    
+
     test_is_stdlib_module()
     print("✓ test_is_stdlib_module passed")
-    
+
     test_malformed_traceback_returns_none()
     print("✓ test_malformed_traceback_returns_none passed")
-    
+
     test_windows_path_format()
     print("✓ test_windows_path_format passed")
-    
+
     print("\nAll tests passed!")

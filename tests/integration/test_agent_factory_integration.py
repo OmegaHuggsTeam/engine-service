@@ -3,15 +3,14 @@ Integration tests for AgentFactory full workflow.
 Tests the complete flow: identify → check → create/load → apply → evolve
 """
 
-import sys
 import os
+import sys
 import tempfile
-import shutil
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 # Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from agents.agent_factory import AgentFactory
 from agents.spec_manager import SpecManager
@@ -30,7 +29,7 @@ def test_full_workflow_new_library():
         # Patch SPECS_DIR to use temp directory
         original_specs_dir = SpecManager.SPECS_DIR
         SpecManager.SPECS_DIR = Path(temp_dir)
-        
+
         try:
             # Mock Groq API response for specialist creation
             # This needs to be a complete, valid spec
@@ -64,10 +63,10 @@ Patch at module level, not instance level.
 
 ## Evolution History
 """
-            
-            with patch('src.utils.llm_client.chat_completion') as mock_chat:
+
+            with patch("src.utils.llm_client.chat_completion") as mock_chat:
                 mock_chat.return_value = mock_spec_content
-                
+
                 # Create traceback with testlibrary
                 traceback_str = """
 Traceback (most recent call last):
@@ -77,32 +76,32 @@ Traceback (most recent call last):
     raise ConnectionError("Failed to connect")
 ConnectionError: Failed to connect
 """
-                
+
                 exception = ConnectionError("Failed to connect")
-                
+
                 # Execute full workflow
                 response = AgentFactory.handle_exception(exception, traceback_str)
-                
+
                 # Verify response structure
-                assert 'specialist_name' in response
-                assert 'specialist_exists' in response
-                assert 'combat_maneuvers_applied' in response
-                assert 'evolution_triggered' in response
-                assert 'suggested_solution' in response
-                assert 'error' in response
-                
+                assert "specialist_name" in response
+                assert "specialist_exists" in response
+                assert "combat_maneuvers_applied" in response
+                assert "evolution_triggered" in response
+                assert "suggested_solution" in response
+                assert "error" in response
+
                 # Verify library was identified
-                assert response['specialist_name'] == 'testlibrary'
-                
+                assert response["specialist_name"] == "testlibrary"
+
                 # Verify specialist was created (not pre-existing)
                 # Note: specialist_exists might be True after creation
-                
+
                 # Verify specialist was saved to disk
-                spec_path = Path(temp_dir) / 'testlibrary.md'
+                spec_path = Path(temp_dir) / "testlibrary.md"
                 assert spec_path.exists(), "Specialist spec file should be created"
-                
+
                 print("✓ Full workflow for new library works correctly")
-                
+
         finally:
             # Restore original SPECS_DIR
             SpecManager.SPECS_DIR = original_specs_dir
@@ -121,7 +120,7 @@ def test_full_workflow_existing_library():
         # Patch SPECS_DIR to use temp directory
         original_specs_dir = SpecManager.SPECS_DIR
         SpecManager.SPECS_DIR = Path(temp_dir)
-        
+
         try:
             # Create existing specialist spec
             spec_content = """# Specialist: existinglibrary
@@ -168,11 +167,11 @@ retry_connection()
 
 - **2024-01-01T00:00:00**: TimeoutError - Added retry logic
 """
-            
+
             # Save spec to temp directory
-            spec_path = Path(temp_dir) / 'existinglibrary.md'
-            spec_path.write_text(spec_content, encoding='utf-8')
-            
+            spec_path = Path(temp_dir) / "existinglibrary.md"
+            spec_path.write_text(spec_content, encoding="utf-8")
+
             # Create traceback with existinglibrary
             traceback_str = """
 Traceback (most recent call last):
@@ -182,30 +181,34 @@ Traceback (most recent call last):
     raise TimeoutError("Request timed out")
 TimeoutError: Request timed out
 """
-            
+
             exception = TimeoutError("Request timed out")
-            
+
             # Execute full workflow
             response = AgentFactory.handle_exception(exception, traceback_str)
-            
+
             # Verify response structure
-            assert 'specialist_name' in response
-            assert 'specialist_exists' in response
-            assert 'combat_maneuvers_applied' in response
-            assert 'suggested_solution' in response
-            
+            assert "specialist_name" in response
+            assert "specialist_exists" in response
+            assert "combat_maneuvers_applied" in response
+            assert "suggested_solution" in response
+
             # Verify library was identified
-            assert response['specialist_name'] == 'existinglibrary'
-            
+            assert response["specialist_name"] == "existinglibrary"
+
             # Verify specialist was loaded (already existed)
-            assert response['specialist_exists'] is True
-            
+            assert response["specialist_exists"] is True
+
             # Verify combat maneuver was applied (error message contains "timed out")
-            assert len(response['combat_maneuvers_applied']) > 0, "Should have applied at least one combat maneuver"
-            assert 'retry_connection()' in response['suggested_solution'], "Solution should contain the retry code"
-            
+            assert (
+                len(response["combat_maneuvers_applied"]) > 0
+            ), "Should have applied at least one combat maneuver"
+            assert (
+                "retry_connection()" in response["suggested_solution"]
+            ), "Solution should contain the retry code"
+
             print("✓ Full workflow for existing library works correctly")
-            
+
         finally:
             # Restore original SPECS_DIR
             SpecManager.SPECS_DIR = original_specs_dir
@@ -225,7 +228,7 @@ def test_workflow_with_evolution():
         # Patch SPECS_DIR to use temp directory
         original_specs_dir = SpecManager.SPECS_DIR
         SpecManager.SPECS_DIR = Path(temp_dir)
-        
+
         try:
             # Create existing specialist spec without matching maneuver
             spec_content = """# Specialist: evolvinglibrary
@@ -258,11 +261,11 @@ Patch carefully.
 
 ## Evolution History
 """
-            
+
             # Save spec to temp directory
-            spec_path = Path(temp_dir) / 'evolvinglibrary.md'
-            spec_path.write_text(spec_content, encoding='utf-8')
-            
+            spec_path = Path(temp_dir) / "evolvinglibrary.md"
+            spec_path.write_text(spec_content, encoding="utf-8")
+
             # Mock Groq API response for combat maneuver generation
             mock_maneuver_response = """### Maneuver: Authentication Error Handler
 
@@ -275,10 +278,10 @@ retry_request()
 ```
 - **Prevention Strategy**: Validate credentials before requests
 """
-            
-            with patch('src.utils.llm_client.chat_completion') as mock_chat:
+
+            with patch("src.utils.llm_client.chat_completion") as mock_chat:
                 mock_chat.return_value = mock_maneuver_response
-                
+
                 # Create traceback with new error type
                 traceback_str = """
 Traceback (most recent call last):
@@ -288,25 +291,26 @@ Traceback (most recent call last):
     raise AuthenticationError("Invalid credentials")
 AuthenticationError: Invalid credentials
 """
-                
+
                 exception = Exception("AuthenticationError: Invalid credentials")
-                
+
                 # Execute full workflow (should trigger evolution)
                 response = AgentFactory.handle_exception(exception, traceback_str)
-                
+
                 # Verify response
-                assert response['specialist_name'] == 'evolvinglibrary'
-                assert response['specialist_exists'] is True
-                assert response['evolution_triggered'] is True
-                
+                assert response["specialist_name"] == "evolvinglibrary"
+                assert response["specialist_exists"] is True
+                assert response["evolution_triggered"] is True
+
                 # Verify spec was updated with new maneuver
-                updated_content = spec_path.read_text(encoding='utf-8')
+                updated_content = spec_path.read_text(encoding="utf-8")
                 # Check that the maneuver was added (look for key elements)
-                assert 'refresh_token()' in updated_content or 'AuthenticationError' in updated_content, \
-                    "Updated spec should contain the new combat maneuver content"
-                
+                assert (
+                    "refresh_token()" in updated_content or "AuthenticationError" in updated_content
+                ), "Updated spec should contain the new combat maneuver content"
+
                 print("✓ Workflow with evolution works correctly")
-                
+
         finally:
             # Restore original SPECS_DIR
             SpecManager.SPECS_DIR = original_specs_dir
@@ -326,14 +330,14 @@ Traceback (most recent call last):
     result = process()
 ValueError: Invalid input
 """
-    
+
     exception = ValueError("Invalid input")
     response = AgentFactory.handle_exception(exception, traceback_str)
-    
+
     # Should handle gracefully
-    assert response['specialist_name'] is None
-    assert response['error'] == "Could not identify library from traceback"
-    
+    assert response["specialist_name"] is None
+    assert response["error"] == "Could not identify library from traceback"
+
     print("✓ Workflow error handling works correctly")
 
 
@@ -341,20 +345,21 @@ def run_all_integration_tests():
     """Run all integration tests."""
     print("\n[AgentFactory Integration Tests]")
     print("-" * 70)
-    
+
     tests = [
         test_full_workflow_new_library,
         test_full_workflow_existing_library,
         test_workflow_with_evolution,
         test_workflow_error_handling,
     ]
-    
+
     for test_func in tests:
         try:
             test_func()
         except Exception as e:
             print(f"✗ {test_func.__name__}: {e}")
             import traceback
+
             traceback.print_exc()
             raise
 

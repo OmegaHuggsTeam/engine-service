@@ -103,14 +103,14 @@ SKILL_CONFIG_VAR2=valor
 class [NomeDaSkill]:
     def __init__(self, config: dict):
         self.config = config
-    
+
     def execute(self, input_data: dict) -> dict:
         """
         Executa a skill.
-        
+
         Args:
             input_data: Dados de entrada
-            
+
         Returns:
             Resultado da execução
         """
@@ -190,7 +190,7 @@ from src.skills.[nome_modulo] import [NomeDaSkill]
 class MeuAgente:
     def __init__(self):
         self.skill = [NomeDaSkill](config={})
-    
+
     def processar(self, dados):
         resultado = self.skill.execute(dados)
         return resultado
@@ -252,5 +252,5 @@ class MeuAgente:
 
 ---
 
-**Mantido por**: [Nome do time/pessoa]  
+**Mantido por**: [Nome do time/pessoa]
 **Última Revisão**: YYYY-MM-DD

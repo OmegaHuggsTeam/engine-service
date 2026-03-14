@@ -2,7 +2,7 @@
 
 **Claude, sua missão é manter o uptime deste MLOps.**
 
-Use o **Groq** para reflexos rápidos e o **Tailscale** para segurança de rede.  
+Use o **Groq** para reflexos rápidos e o **Tailscale** para segurança de rede.
 Comece subindo a stack com `bin/docker-up` ou, se preferir modo nativo, inicie o webhook manualmente.
 
 ---

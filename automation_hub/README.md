@@ -65,7 +65,7 @@ python agents/claude_operator.py # Regras fixas
 
 ## IFTTT - Configurar Webhook
 
-**Com Tailscale** (recomendado): `https://server.tail1f14ca.ts.net/webhook?key=...`  
+**Com Tailscale** (recomendado): `https://server.tail1f14ca.ts.net/webhook?key=...`
 Ver [docs/TAILSCALE.md](docs/TAILSCALE.md) para setup completo.
 
 **Sem Tailscale** (ngrok ou IP local): `http://SEU_IP:8765/webhook`

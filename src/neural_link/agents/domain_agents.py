@@ -8,7 +8,6 @@ Extends CrmDomainAgent 3-layer context pattern:
 """
 
 import logging
-from typing import Any
 
 from src.neural_link.agents.crm_domain_agent import CrmDomainAgent
 
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 class MarketingDomainAgent(CrmDomainAgent):
     """
     Marketing Domain Agent with 3-layer context injection.
-    
+
     Specializes in: copywriting, campaign strategy, A/B testing, audience targeting.
     """
 
@@ -40,7 +39,7 @@ class MarketingDomainAgent(CrmDomainAgent):
 class SocialMediaDomainAgent(CrmDomainAgent):
     """
     Social Media Domain Agent with 3-layer context injection.
-    
+
     Specializes in: social posting, engagement analysis, content calendar.
     """
 
@@ -62,7 +61,7 @@ class SocialMediaDomainAgent(CrmDomainAgent):
 class AiEngineerDomainAgent(CrmDomainAgent):
     """
     AI Engineer Domain Agent with 3-layer context injection.
-    
+
     Specializes in: model evaluation, pipeline design, RAG architecture.
     """
 

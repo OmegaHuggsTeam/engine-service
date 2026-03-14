@@ -15,8 +15,8 @@ import json
 import logging
 from typing import Optional
 
-from .base_agent import BaseAgent
 from ..rag.hybrid_rag import HybridRAG
+from .base_agent import BaseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,9 @@ class ComposerAgent(BaseAgent):
         """Carrega n8n_master_context.json para best practices."""
         try:
             from pathlib import Path
+
             context_path = Path("data/chunks/n8n_master_context.json")
-            
+
             if context_path.exists():
                 with open(context_path, "r", encoding="utf-8") as f:
                     self.master_context = json.load(f)
@@ -71,7 +72,7 @@ class ComposerAgent(BaseAgent):
 
         # Step 1: Buscar templates relevantes
         templates = self._search_templates(objective, top_k=max_templates)
-        
+
         if not templates:
             return {
                 "error": "Nenhum template relevante encontrado",
@@ -118,16 +119,13 @@ class ComposerAgent(BaseAgent):
                 top_k=top_k,
                 context={"category": "external_template"},
             )
-            
+
             # Filtrar apenas external_template
-            templates = [
-                r for r in results 
-                if r.get("category") == "external_template"
-            ]
-            
+            templates = [r for r in results if r.get("category") == "external_template"]
+
             logger.info(f"ComposerAgent: Found {len(templates)} relevant templates")
             return templates
-            
+
         except Exception as e:
             logger.error(f"ComposerAgent: Template search failed: {e}")
             return []
@@ -152,7 +150,7 @@ class ComposerAgent(BaseAgent):
 
         # Analisar objetivo para identificar trigger
         objective_lower = objective.lower()
-        
+
         if any(kw in objective_lower for kw in ["webhook", "api", "http"]):
             components["trigger"] = "Webhook"
         elif any(kw in objective_lower for kw in ["schedule", "cron", "diário", "horário"]):
@@ -163,21 +161,27 @@ class ComposerAgent(BaseAgent):
             components["trigger"] = "Email"
         else:
             # Default: usar trigger mais comum dos templates
-            triggers = [t.get("node_type", "") for t in templates if "trigger" in t.get("node_type", "").lower()]
+            triggers = [
+                t.get("node_type", "")
+                for t in templates
+                if "trigger" in t.get("node_type", "").lower()
+            ]
             components["trigger"] = triggers[0] if triggers else "Webhook"
 
         # Identificar processadores dos templates
         for template in templates:
             node_type = template.get("node_type", "")
             service = template.get("service", "")
-            
+
             if "trigger" not in node_type.lower():
-                components["processors"].append({
-                    "node_type": node_type,
-                    "service": service,
-                    "parameters": template.get("parameters", {}),
-                })
-            
+                components["processors"].append(
+                    {
+                        "node_type": node_type,
+                        "service": service,
+                        "parameters": template.get("parameters", {}),
+                    }
+                )
+
             # Coletar credenciais
             creds = template.get("credential_types", [])
             components["credentials"].update(creds)
@@ -214,9 +218,7 @@ class ComposerAgent(BaseAgent):
             "name": self._generate_workflow_name(objective),
             "nodes": [],
             "connections": {},
-            "settings": {
-                "executionOrder": "v1"
-            },
+            "settings": {"executionOrder": "v1"},
             "staticData": None,
             "tags": [],
             "triggerCount": 0,
@@ -237,23 +239,27 @@ class ComposerAgent(BaseAgent):
         for processor in components["processors"][:3]:  # Limit to 3 processors
             proc_node = self._create_processor_node(processor, node_id)
             workflow["nodes"].append(proc_node)
-            
+
             # Connect to previous node
             if prev_node_name:
                 if prev_node_name not in workflow["connections"]:
-                    workflow["connections"][prev_node_name] = {"main": [[{"node": proc_node["name"], "type": "main", "index": 0}]]}
-            
+                    workflow["connections"][prev_node_name] = {
+                        "main": [[{"node": proc_node["name"], "type": "main", "index": 0}]]
+                    }
+
             prev_node_name = proc_node["name"]
             node_id += 1
 
         # Add output node
         output_node = self._create_output_node(components["output"], node_id)
         workflow["nodes"].append(output_node)
-        
+
         # Connect to previous node
         if prev_node_name:
             if prev_node_name not in workflow["connections"]:
-                workflow["connections"][prev_node_name] = {"main": [[{"node": output_node["name"], "type": "main", "index": 0}]]}
+                workflow["connections"][prev_node_name] = {
+                    "main": [[{"node": output_node["name"], "type": "main", "index": 0}]]
+                }
 
         return workflow
 
@@ -265,9 +271,9 @@ class ComposerAgent(BaseAgent):
             "Telegram": "n8n-nodes-base.telegramTrigger",
             "Email": "n8n-nodes-base.emailReadImap",
         }
-        
+
         node_type = trigger_map.get(trigger_type, "n8n-nodes-base.webhook")
-        
+
         return {
             "parameters": {},
             "name": f"{trigger_type} Trigger",
@@ -298,9 +304,9 @@ class ComposerAgent(BaseAgent):
             "Database": "n8n-nodes-base.postgres",
             "HTTP": "n8n-nodes-base.httpRequest",
         }
-        
+
         node_type = output_map.get(output_type, "n8n-nodes-base.httpRequest")
-        
+
         return {
             "parameters": {},
             "name": f"{output_type} Output",
@@ -322,13 +328,12 @@ class ComposerAgent(BaseAgent):
         # Adicionar tags baseadas nos nodes
         services = {node.get("type", "").split(".")[-1] for node in workflow["nodes"]}
         workflow["tags"] = [{"name": svc} for svc in services if svc]
-        
+
         # Contar triggers
         workflow["triggerCount"] = sum(
-            1 for node in workflow["nodes"] 
-            if "trigger" in node.get("type", "").lower()
+            1 for node in workflow["nodes"] if "trigger" in node.get("type", "").lower()
         )
-        
+
         return workflow
 
     def _generate_reasoning(self, objective: str, templates: list[dict], components: dict) -> str:
@@ -343,19 +348,19 @@ class ComposerAgent(BaseAgent):
             "",
             "Templates utilizados:",
         ]
-        
+
         for i, t in enumerate(templates, 1):
             source = t.get("source_file", "unknown").replace("github/zie619.github.io/", "")
             service = t.get("service", "unknown")
             score = t.get("score", 0.0)
             lines.append(f"{i}. {service} (relevância: {score:.2f}) - {source}")
-        
+
         if components["credentials"]:
             lines.append("")
             lines.append("Credenciais necessárias:")
             for cred in components["credentials"]:
                 lines.append(f"- {cred}")
-        
+
         return "\n".join(lines)
 
     def execute(self, task: dict) -> dict:

@@ -6,15 +6,12 @@ All external dependencies (LLM, ChromaDB, Neo4j) are mocked.
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from src.neural_link.agents.domain_agents import (
+    AiEngineerDomainAgent,
     MarketingDomainAgent,
     SocialMediaDomainAgent,
-    AiEngineerDomainAgent,
 )
 from src.neural_link.orchestrator.agent_selector import AGENT_REGISTRY
-
 
 # ==================================================================
 # TestMarketingDomainAgent
@@ -50,13 +47,13 @@ class TestMarketingDomainAgent:
         """Test execute method with mocked LLM and vector search."""
         # Mock vector search to return empty results
         mock_search.return_value = []
-        
+
         # Mock LLM response
         mock_chat.return_value = "Campaign strategy: Focus on email marketing with A/B testing"
-        
+
         agent = MarketingDomainAgent()
         result = agent.execute("Create a campaign strategy for product launch")
-        
+
         assert result == "Campaign strategy: Focus on email marketing with A/B testing"
         assert mock_chat.called
         assert mock_search.called
@@ -70,15 +67,15 @@ class TestMarketingDomainAgent:
             {
                 "content": "Marketing best practices for campaigns",
                 "score": 0.8,
-                "metadata": {"category": "marketing", "source_file": "marketing_guide.md"}
+                "metadata": {"category": "marketing", "source_file": "marketing_guide.md"},
             }
         ]
-        
+
         mock_chat.return_value = "Strategy based on best practices"
-        
+
         agent = MarketingDomainAgent()
         result = agent.execute("Develop email campaign")
-        
+
         assert result == "Strategy based on best practices"
         assert mock_chat.called
 
@@ -116,10 +113,10 @@ class TestSocialMediaDomainAgent:
         """Test execute method with mocked LLM and vector search."""
         mock_search.return_value = []
         mock_chat.return_value = "Social media calendar created with optimal posting times"
-        
+
         agent = SocialMediaDomainAgent()
         result = agent.execute("Create a social media content calendar")
-        
+
         assert result == "Social media calendar created with optimal posting times"
         assert mock_chat.called
 
@@ -131,15 +128,15 @@ class TestSocialMediaDomainAgent:
             {
                 "content": "Engagement metrics: likes, shares, comments",
                 "score": 0.75,
-                "metadata": {"category": "social_media"}
+                "metadata": {"category": "social_media"},
             }
         ]
-        
+
         mock_chat.return_value = "Engagement analysis: High performance on visual content"
-        
+
         agent = SocialMediaDomainAgent()
         result = agent.execute("Analyze engagement metrics")
-        
+
         assert "Engagement analysis" in result
 
 
@@ -182,10 +179,10 @@ class TestAiEngineerDomainAgent:
         """Test execute method with mocked LLM and vector search."""
         mock_search.return_value = []
         mock_chat.return_value = "ML pipeline designed with evaluation stages"
-        
+
         agent = AiEngineerDomainAgent()
         result = agent.execute("Design an ML evaluation pipeline")
-        
+
         assert result == "ML pipeline designed with evaluation stages"
         assert mock_chat.called
 
@@ -197,15 +194,15 @@ class TestAiEngineerDomainAgent:
             {
                 "content": "RAG architecture: embeddings, vector store, retrieval",
                 "score": 0.85,
-                "metadata": {"category": "ai", "source_file": "rag_guide.md"}
+                "metadata": {"category": "ai", "source_file": "rag_guide.md"},
             }
         ]
-        
+
         mock_chat.return_value = "RAG system designed with ChromaDB and optimized retrieval"
-        
+
         agent = AiEngineerDomainAgent()
         result = agent.execute("Design a RAG architecture")
-        
+
         assert "RAG" in result
 
 
@@ -249,9 +246,14 @@ class TestAgentRegistryCompleteness:
 
     def test_specialist_agents_have_knowledge_categories(self):
         """Test top specialist agents have knowledge_categories field."""
-        specialists = ["devops_agent", "security_audit_agent", "testing_agent", 
-                      "documentation_agent", "frontend_agent"]
-        
+        specialists = [
+            "devops_agent",
+            "security_audit_agent",
+            "testing_agent",
+            "documentation_agent",
+            "frontend_agent",
+        ]
+
         for agent_id in specialists:
             agent_info = AGENT_REGISTRY.get(agent_id)
             assert agent_info is not None, f"{agent_id} not found in registry"
@@ -272,18 +274,19 @@ class TestSpecialistAdaptiveTruncation:
     @patch("sklearn.feature_extraction.text.TfidfVectorizer")
     def test_score_filter_applied(self, mock_vectorizer, mock_cosine):
         """Test that score threshold filters low-relevance chunks."""
-        from src.neural_link.agents.specialist_agent import _search_chunks
         import numpy as np
-        
+
+        from src.neural_link.agents.specialist_agent import _search_chunks
+
         # Mock TF-IDF vectorizer
         mock_vec_instance = MagicMock()
         mock_vectorizer.return_value = mock_vec_instance
         mock_vec_instance.fit_transform.return_value = MagicMock()
         mock_vec_instance.transform.return_value = MagicMock()
-        
+
         # Mock cosine similarity with scores above and below threshold
         mock_cosine.return_value = np.array([[0.8, 0.3, 0.6, 0.2, 0.9]])  # 0.35 threshold
-        
+
         chunks = [
             {"content": "High relevance content 1"},
             {"content": "Low relevance content"},
@@ -291,9 +294,9 @@ class TestSpecialistAdaptiveTruncation:
             {"content": "Very low relevance"},
             {"content": "High relevance content 2"},
         ]
-        
+
         result = _search_chunks(chunks, "test query", top_k=5)
-        
+
         # Should filter out chunks with score < 0.35 (indices 1 and 3)
         assert len(result) == 3
         assert all(chunk.get("score", 0) >= 0.35 for chunk in result)
@@ -302,44 +305,45 @@ class TestSpecialistAdaptiveTruncation:
     @patch("sklearn.feature_extraction.text.TfidfVectorizer")
     def test_adaptive_truncation_applied(self, mock_vectorizer, mock_cosine):
         """Test that adaptive truncation limits content based on score."""
-        from src.neural_link.agents.specialist_agent import _search_chunks
         import numpy as np
-        
+
+        from src.neural_link.agents.specialist_agent import _search_chunks
+
         # Mock TF-IDF vectorizer
         mock_vec_instance = MagicMock()
         mock_vectorizer.return_value = mock_vec_instance
         mock_vec_instance.fit_transform.return_value = MagicMock()
         mock_vec_instance.transform.return_value = MagicMock()
-        
+
         # Mock cosine similarity with different scores
         mock_cosine.return_value = np.array([[0.8, 0.5]])
-        
+
         long_content = "x" * 1000  # 1000 chars
         chunks = [
             {"content": long_content},
             {"content": long_content},
         ]
-        
+
         result = _search_chunks(chunks, "test query", top_k=2)
-        
+
         # High score (0.8): max_chars = max(100, int(500 * 0.8)) = 400
         assert len(result[0]["content"]) == 400
-        
+
         # Medium score (0.5): max_chars = max(100, int(500 * 0.5)) = 250
         assert len(result[1]["content"]) == 250
 
     def test_fallback_search_no_truncation(self):
         """Test fallback keyword search doesn't break."""
         from src.neural_link.agents.specialist_agent import _search_chunks
-        
+
         chunks = [
             {"content": "kubernetes deployment configuration"},
             {"content": "docker container setup"},
             {"content": "monitoring and observability"},
         ]
-        
+
         result = _search_chunks(chunks, "kubernetes monitoring", top_k=2)
-        
+
         # Should return chunks with matching keywords
         assert len(result) <= 2
         assert len(result) > 0

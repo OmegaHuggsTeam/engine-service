@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
   last_tested_at TIMESTAMPTZ,
   status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'expired', 'revoked')),
   metadata JSONB DEFAULT '{}'::jsonb,
-  
+
   -- Constraint: apenas uma chave ativa por plataforma/prefixo
   UNIQUE(platform, key_prefix)
 );
@@ -64,7 +64,7 @@ CREATE TRIGGER trigger_update_last_tested_at
 
 -- View para chaves ativas (sem expor key_value completo)
 CREATE OR REPLACE VIEW api_keys_active AS
-SELECT 
+SELECT
   id,
   platform,
   key_prefix,

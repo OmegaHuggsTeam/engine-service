@@ -2,12 +2,10 @@
 
 import logging
 import threading
-import time
-from typing import Callable, Dict, Optional, Any
+from typing import Any, Callable, Dict, Optional
 
 from kubernetes import client, config, watch
 from kubernetes.client.rest import ApiException
-
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +115,7 @@ class K8sEventMonitor:
     def _watch_loop(self) -> None:
         """Main event watching loop with reconnection logic (runs in thread)."""
         logger.info("Starting Kubernetes event watch loop")
-        
+
         reconnect_delay = self._reconnect_delay
         consecutive_failures = 0
 
@@ -125,26 +123,27 @@ class K8sEventMonitor:
             try:
                 # Determine which resource types to watch based on hooks
                 resource_types = self._get_resource_types_from_hooks()
-                
+
                 if not resource_types:
-                    logger.warning("No resource types configured in hooks, watching Pods by default")
+                    logger.warning(
+                        "No resource types configured in hooks, watching Pods by default"
+                    )
                     resource_types = ["Pod"]
-                
+
                 # Watch events for configured resource types
                 # For now, we'll watch Pods (most common use case)
                 # TODO: Support watching multiple resource types simultaneously
                 logger.info(f"Watching resource types: {resource_types}")
-                
+
                 for event in self.watcher.stream(
-                    self.v1.list_pod_for_all_namespaces, 
-                    timeout_seconds=60
+                    self.v1.list_pod_for_all_namespaces, timeout_seconds=60
                 ):
                     if not self.running or self._stop_event.is_set():
                         break
 
                     # Process the event
                     self._process_event(event)
-                    
+
                     # Reset reconnection delay on successful event processing
                     if consecutive_failures > 0:
                         consecutive_failures = 0
@@ -158,38 +157,38 @@ class K8sEventMonitor:
                         f"Kubernetes API error in watch loop (attempt {consecutive_failures}): "
                         f"{e.status} - {e.reason}"
                     )
-                    
+
                     # Implement exponential backoff with max delay
                     current_delay = min(
                         reconnect_delay * (2 ** (consecutive_failures - 1)),
-                        self._max_reconnect_delay
+                        self._max_reconnect_delay,
                     )
-                    
+
                     logger.info(
                         f"Reconnecting in {current_delay} seconds "
                         f"(base delay: {reconnect_delay}s, failures: {consecutive_failures})"
                     )
-                    
+
                     # Wait before retry, but check stop event periodically
                     if self._stop_event.wait(current_delay):
                         break
-                        
+
             except Exception as e:
                 if self.running:
                     consecutive_failures += 1
                     logger.error(
-                        f"Unexpected error in watch loop (attempt {consecutive_failures}): {e}", 
-                        exc_info=True
+                        f"Unexpected error in watch loop (attempt {consecutive_failures}): {e}",
+                        exc_info=True,
                     )
-                    
+
                     # Use same exponential backoff for unexpected errors
                     current_delay = min(
                         reconnect_delay * (2 ** (consecutive_failures - 1)),
-                        self._max_reconnect_delay
+                        self._max_reconnect_delay,
                     )
-                    
+
                     logger.info(f"Retrying in {current_delay} seconds")
-                    
+
                     if self._stop_event.wait(current_delay):
                         break
 
@@ -198,7 +197,7 @@ class K8sEventMonitor:
     def _get_resource_types_from_hooks(self) -> list[str]:
         """
         Extract unique resource types from registered hooks.
-        
+
         Returns:
             List of unique resource type names
         """
@@ -226,9 +225,7 @@ class K8sEventMonitor:
         # Extract basic event information
         resource_type = obj.kind if hasattr(obj, "kind") else "Unknown"
         name = obj.metadata.name if hasattr(obj, "metadata") else "unknown"
-        namespace = (
-            obj.metadata.namespace if hasattr(obj, "metadata") else "unknown"
-        )
+        namespace = obj.metadata.namespace if hasattr(obj, "metadata") else "unknown"
 
         logger.debug(
             f"Received event: type={event_type}, resource={resource_type}, "
@@ -285,22 +282,22 @@ class K8sEventMonitor:
     def _evaluate_filters(self, obj: Any, filters: dict) -> bool:
         """
         Evaluate filter expressions against a Kubernetes object.
-        
+
         Supports simple JSONPath-like expressions:
         - "status.phase": "Failed" - checks if status.phase equals "Failed"
         - "status.containerStatuses[*].state.waiting.reason": "CrashLoopBackOff"
           checks if any container has this reason
-        
+
         Args:
             obj: Kubernetes object to evaluate
             filters: Dict of filter expressions and expected values
-            
+
         Returns:
             True if all filters match
         """
         for path, expected_value in filters.items():
             actual_value = self._get_nested_value(obj, path)
-            
+
             # Handle list wildcard matching [*]
             if "[*]" in path:
                 # If actual_value is a list, check if any item matches
@@ -315,35 +312,35 @@ class K8sEventMonitor:
                 # Direct value comparison
                 if actual_value != expected_value:
                     return False
-                    
+
         return True
 
     def _get_nested_value(self, obj: Any, path: str) -> Any:
         """
         Get nested value from object using dot notation path.
-        
+
         Supports:
         - Simple paths: "status.phase"
         - Array wildcards: "status.containerStatuses[*].state.waiting.reason"
-        
+
         Args:
             obj: Object to traverse
             path: Dot-separated path with optional [*] for array wildcard
-            
+
         Returns:
             Value at path, or None if not found
         """
         parts = path.split(".")
         current = obj
-        
+
         for part in parts:
             if current is None:
                 return None
-                
+
             # Handle array wildcard [*]
             if "[*]" in part:
                 field_name = part.replace("[*]", "")
-                
+
                 # Get the array field
                 if hasattr(current, field_name):
                     current = getattr(current, field_name)
@@ -351,16 +348,13 @@ class K8sEventMonitor:
                     current = current.get(field_name)
                 else:
                     return None
-                    
+
                 # If it's a list, apply remainder of path to each element
                 if isinstance(current, list):
                     remainder_idx = parts.index(part) + 1
                     if remainder_idx < len(parts):
                         remainder = ".".join(parts[remainder_idx:])
-                        return [
-                            self._get_nested_value(item, remainder)
-                            for item in current
-                        ]
+                        return [self._get_nested_value(item, remainder) for item in current]
                     return current
                 else:
                     return None
@@ -372,7 +366,7 @@ class K8sEventMonitor:
                     current = current.get(part)
                 else:
                     return None
-                    
+
         return current
 
     def _dispatch_event(self, event: dict, hook: dict) -> None:
@@ -389,23 +383,19 @@ class K8sEventMonitor:
             return
 
         logger.info(
-            f"Dispatching event to handler '{handler_name}' "
-            f"for {event.get('type')} event"
+            f"Dispatching event to handler '{handler_name}' " f"for {event.get('type')} event"
         )
 
         # Look up the registered handler
         handler = self._handlers.get(handler_name)
-        
+
         if handler:
             try:
                 # Call the handler with event and hook context
                 handler(event, hook)
                 logger.debug(f"Successfully called handler: {handler_name}")
             except Exception as e:
-                logger.error(
-                    f"Error calling handler '{handler_name}': {e}",
-                    exc_info=True
-                )
+                logger.error(f"Error calling handler '{handler_name}': {e}", exc_info=True)
         else:
             logger.warning(
                 f"Handler '{handler_name}' not registered. "

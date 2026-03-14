@@ -10,7 +10,7 @@ Este documento define as regras de segurança que DEVEM ser seguidas por todas a
 
 **Descrição**: Campos de senha, cartão de crédito, CPF, e-mail e outros dados pessoais NUNCA devem receber valores via `execute_script`.
 
-**Razão**: 
+**Razão**:
 - Segurança: Scripts podem ser interceptados ou logados
 - Detecção de automação: Sites detectam injeção de JavaScript
 - Compliance: Violação de políticas de segurança
@@ -110,10 +110,10 @@ exec(generated_code, namespace)
 def skill_<nome>(selum: SelumOfPersistence) -> bool:
     """
     Descrição da skill.
-    
+
     Args:
         selum: Instância do SelumOfPersistence
-        
+
     Returns:
         True se objetivo foi atingido, False caso contrário
     """
@@ -200,11 +200,11 @@ def _extract_html_context(self, selector: str) -> str:
     """Extrai HTML da área problemática."""
     try:
         body_html = self.driver.find_element("tag name", "body").get_attribute('outerHTML')
-        
+
         # SEMPRE limitar a 5000 chars
         if len(body_html) > 5000:
             return body_html[:5000]
-        
+
         return body_html
     except Exception:
         return ""
@@ -224,15 +224,15 @@ def execute_skill(self, skill_name: str) -> bool:
     """Executa skill e valida retorno."""
     if skill_name not in self.skill_registry:
         return False
-    
+
     try:
         result = self.skill_registry[skill_name](self)
-        
+
         # SEMPRE validar tipo de retorno
         if not isinstance(result, bool):
             self.logger.warning(f"Skill '{skill_name}' retornou tipo inválido: {type(result)}")
             return False
-        
+
         return result
     except Exception as e:
         self.logger.error(f"Skill '{skill_name}' falhou: {e}")
@@ -284,7 +284,7 @@ import msvcrt  # Para file locking no Windows
 def _update_abstractions_md(self, skill_info: SkillInfo) -> bool:
     """Atualiza Abstractions.md com atomicidade."""
     file_path = "docs/paladin_grimoire/Abstractions.md"
-    
+
     try:
         with open(file_path, 'a', encoding='utf-8') as f:
             # Adquirir lock exclusivo
@@ -292,13 +292,13 @@ def _update_abstractions_md(self, skill_info: SkillInfo) -> bool:
                 msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
             else:  # Linux/Mac
                 fcntl.flock(f, fcntl.LOCK_EX)
-            
+
             # Escrever conteúdo
             f.write(f"\n## {skill_info.name}\n")
             f.write(f"{skill_info.documentation}\n")
-            
+
             # Lock é liberado automaticamente ao fechar arquivo
-        
+
         return True
     except Exception as e:
         self.logger.error(f"Falha ao atualizar Abstractions.md: {e}")

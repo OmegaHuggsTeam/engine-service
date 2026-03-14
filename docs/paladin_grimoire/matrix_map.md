@@ -65,7 +65,7 @@ MATRIX_MAP = {
         "markers": ["input[type='email']", "button#identifierNext"],
         "description": "Página de login do Gmail (email)"
     },
-    
+
     # Zona Beta: Password
     "GMAIL_PASSWORD": {
         "selector": "form#passwordForm",
@@ -75,7 +75,7 @@ MATRIX_MAP = {
         "markers": ["input[type='password']", "button#passwordNext"],
         "description": "Página de senha do Gmail"
     },
-    
+
     # Zona Gamma: 2FA Challenge
     "GMAIL_2FA": {
         "selector": "div#totpPin",
@@ -85,7 +85,7 @@ MATRIX_MAP = {
         "markers": ["input#totpPin", "button#submit"],
         "description": "Desafio de autenticação de dois fatores"
     },
-    
+
     # Zona Delta: Inbox
     "GMAIL_INBOX": {
         "selector": "div.inbox-container",
@@ -95,7 +95,7 @@ MATRIX_MAP = {
         "markers": ["div.aeF", "button[gh='cm']"],
         "description": "Caixa de entrada do Gmail"
     },
-    
+
     # Zona Epsilon: Message View
     "MESSAGE_VIEW": {
         "selector": "div.message-container",
@@ -105,7 +105,7 @@ MATRIX_MAP = {
         "markers": ["div.message-body", "button.reply"],
         "description": "Visualização de mensagem individual"
     },
-    
+
     # Zona Zeta: Settings Modal (Iframe)
     "SETTINGS_MODAL": {
         "selector": "iframe#settings-frame",
@@ -131,7 +131,7 @@ MATRIX_MAP = {
         "markers": ["input#email", "button.login-btn"],
         "description": "Página de login da Groq API"
     },
-    
+
     # Zona Beta: OAuth Challenge (Iframe)
     "GROQ_OAUTH": {
         "selector": "iframe#oauth-frame",
@@ -141,7 +141,7 @@ MATRIX_MAP = {
         "markers": ["form#identifier-form", "button#submit"],
         "description": "Desafio OAuth em iframe"
     },
-    
+
     # Zona Gamma: Dashboard
     "GROQ_DASHBOARD": {
         "selector": "div.dashboard-container",
@@ -151,7 +151,7 @@ MATRIX_MAP = {
         "markers": ["nav.sidebar", "div.main-content"],
         "description": "Dashboard principal da Groq API"
     },
-    
+
     # Zona Delta: API Keys
     "API_KEYS": {
         "selector": "div.api-keys-section",
@@ -161,7 +161,7 @@ MATRIX_MAP = {
         "markers": ["table.keys-table", "button.create-key"],
         "description": "Seção de gerenciamento de API keys"
     },
-    
+
     # Zona Epsilon: Create Key Modal (Shadow DOM)
     "CREATE_KEY_MODAL": {
         "selector": "modal-component::shadow div.modal",

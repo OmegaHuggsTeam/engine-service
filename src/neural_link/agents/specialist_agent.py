@@ -63,13 +63,14 @@ def _search_chunks(chunks: list[dict], query: str, top_k: int = TOP_K_CONTEXT) -
     try:
         from sklearn.feature_extraction.text import TfidfVectorizer
         from sklearn.metrics.pairwise import cosine_similarity
+
         contents = [c.get("content", "") for c in chunks]
         if contents and any(contents):
             vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
             doc_matrix = vectorizer.fit_transform(contents)
             query_vec = vectorizer.transform([query])
             scores = cosine_similarity(query_vec, doc_matrix).flatten()
-            
+
             # Score-based filtering: remove low-relevance noise
             scored_chunks = []
             for i, score in enumerate(scores):
@@ -77,11 +78,11 @@ def _search_chunks(chunks: list[dict], query: str, top_k: int = TOP_K_CONTEXT) -
                     chunk = chunks[i].copy()
                     chunk["score"] = float(score)
                     scored_chunks.append(chunk)
-            
+
             # Sort by score and take top_k
             scored_chunks.sort(key=lambda x: x["score"], reverse=True)
             result = scored_chunks[:top_k]
-            
+
             # Apply adaptive truncation: higher score = more content
             for chunk in result:
                 score = chunk.get("score", 0.5)
@@ -89,7 +90,7 @@ def _search_chunks(chunks: list[dict], query: str, top_k: int = TOP_K_CONTEXT) -
                 content = chunk.get("content", "")
                 if len(content) > max_chars:
                     chunk["content"] = content[:max_chars]
-            
+
             if result:
                 return result
     except ImportError:
@@ -160,7 +161,9 @@ def _extract_expressions(raw_json: str) -> list[dict]:
 
     # Legacy pattern: {{ $node["NodeName"].json["fieldName"] }}
     # In raw JSON the quotes may appear as \" (escaped)
-    for m in re.finditer(r'\{\{\s*\$node\[\\?"([^"\\]+)\\?"\]\.json\[\\?"([^"\\]+)\\?"\]', raw_json):
+    for m in re.finditer(
+        r'\{\{\s*\$node\[\\?"([^"\\]+)\\?"\]\.json\[\\?"([^"\\]+)\\?"\]', raw_json
+    ):
         key = (m.group(1), m.group(2))
         if key not in seen:
             seen.add(key)
@@ -235,6 +238,7 @@ class SpecialistAgent(BaseAgent):
 
         try:
             from src.utils.vector_db import get_by_category
+
             self._knowledge = get_by_category(chunk_type)
         except Exception as e:
             logger.debug("ChromaDB get_by_category falhou: %s", e)
@@ -339,6 +343,7 @@ class SpecialistAgent(BaseAgent):
         """Invoca o LLM com o prompt decorado."""
         try:
             from src.utils.llm_client import chat_completion
+
             system = (
                 "Você é um especialista que responde com base exclusivamente "
                 "no Contexto de Referência fornecido. Seja preciso e prático."
@@ -364,7 +369,7 @@ class SpecialistAgent(BaseAgent):
     ) -> str:
         """
         Analisa logs de Pod em CrashLoopBackOff usando conhecimento de padrões de erro Kubernetes.
-        
+
         Identifica padrões de erro comuns (conexão, autenticação, configuração, recursos, etc.)
         e fornece sugestões de correção baseadas em conhecimento especializado.
 
@@ -409,7 +414,7 @@ class SpecialistAgent(BaseAgent):
             "   - Verificações a realizar\n\n"
             "Seja conciso mas completo. Priorize ações que podem ser tomadas imediatamente."
         )
-        
+
         # Add Pod context if provided
         if pod_name or namespace:
             task = f"**Pod**: {pod_name} (namespace: {namespace})\n\n" + task
@@ -435,7 +440,7 @@ class SpecialistAgent(BaseAgent):
           7. Adapta credenciais para $env
           8. Formata e retorna Telegram Markdown
         """
-        from src.extractors.n8n_extractor import extract_operation_modules, _extract_service_name
+        from src.extractors.n8n_extractor import _extract_service_name, extract_operation_modules
         from src.processors.n8n_knowledge import classify_workflow
 
         # 1. Download
@@ -479,13 +484,9 @@ class SpecialistAgent(BaseAgent):
         # 5. Build deterministic Portuguese summary
         workflow_name = workflow_data.get("name", "Workflow sem nome")
         ordered_nodes = sorted(modules, key=lambda m: m["chunk_index"])
-        chain = " -> ".join(
-            _extract_service_name(m["node_type"]) for m in ordered_nodes
-        )
+        chain = " -> ".join(_extract_service_name(m["node_type"]) for m in ordered_nodes)
         services = sorted({m["service"] for m in modules})
-        cred_types = sorted(
-            {c for m in modules for c in m.get("credential_types", [])}
-        )
+        cred_types = sorted({c for m in modules for c in m.get("credential_types", [])})
 
         # 6. Scan expressions
         expressions = _extract_expressions(raw_json)

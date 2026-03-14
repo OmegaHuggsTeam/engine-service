@@ -114,11 +114,11 @@
 
 class MultiStepFlow:
     """Orquestrador de fluxos multi-etapa."""
-    
+
     def __init__(self, flow_name: str):
         self.flow_name = flow_name
         self.state = self._load_checkpoint()
-    
+
     def execute(self):
         """Executa fluxo completo."""
         steps = [
@@ -127,30 +127,30 @@ class MultiStepFlow:
             self._step_groq_login,
             self._step_extract_key,
         ]
-        
+
         for i, step in enumerate(steps):
             if i < self.state.get("last_completed_step", -1):
                 continue  # Skip completed steps
-            
+
             try:
                 result = step()
                 self._save_checkpoint(i, result)
             except Exception as e:
                 self._handle_error(i, e)
                 raise
-    
+
     def _step_google_groups(self):
         """Etapa 1: Obter email do Google Groups."""
         pass
-    
+
     def _step_github_signup(self):
         """Etapa 2: Criar conta GitHub."""
         pass
-    
+
     def _step_groq_login(self):
         """Etapa 3: Login no Groq via GitHub."""
         pass
-    
+
     def _step_extract_key(self):
         """Etapa 4: Extrair API key."""
         pass
@@ -196,26 +196,26 @@ class MultiStepFlow:
 
 with tab_api_keys:
     st.header("Gestão de API Keys")
-    
+
     # Seção 1: Extração
     with st.expander("Extrair Nova Chave", expanded=True):
         platform = st.selectbox("Plataforma", ["groq", "openai"])
         manual = st.checkbox("Modo Manual (OAuth)", value=True)
-        
+
         if st.button("Extrair Chave"):
             with st.spinner("Extraindo..."):
                 # Chamar web_extractor
                 pass
-    
+
     # Seção 2: Chaves Ativas
     st.subheader("Chaves Ativas")
     # Buscar do Supabase e exibir tabela
-    
+
     # Seção 3: Validação
     if st.button("Testar Todas as Chaves"):
         # Chamar supabase_client.test_all_keys()
         pass
-    
+
     # Seção 4: Logs
     with st.expander("Logs de Execução"):
         # Ler logs/extractor.log

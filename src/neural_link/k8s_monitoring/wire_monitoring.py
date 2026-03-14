@@ -13,7 +13,7 @@ Uso:
     # As a module
     from src.neural_link.k8s_monitoring.wire_monitoring import wire_and_start
     monitor, pod_monitor = wire_and_start(manifest_path="superpowers/n8n/manifest.json")
-    
+
     # As a script
     python -m src.neural_link.k8s_monitoring.wire_monitoring
 """
@@ -26,11 +26,11 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from .manifest_loader import ManifestLoader
-from .k8s_event_monitor import K8sEventMonitor
-from .pod_status_monitor import PodStatusMonitor
-from .log_analyzer import KubectlLogAnalyzer
 from . import __version__
+from .k8s_event_monitor import K8sEventMonitor
+from .log_analyzer import KubectlLogAnalyzer
+from .manifest_loader import ManifestLoader
+from .pod_status_monitor import PodStatusMonitor
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +60,9 @@ def wire_and_start(
         (K8sEventMonitor, PodStatusMonitor) for start/stop control
     """
     global _k8s_monitor, _pod_monitor, _notifier
-    
+
     logger.info("Starting n8n-k8s-monitoring v%s", __version__)
-    
+
     # Load and validate manifest
     loader = ManifestLoader()
     manifest = loader.load_manifest(manifest_path)
@@ -81,6 +81,7 @@ def wire_and_start(
     specialist = None
     try:
         from src.neural_link.agents.specialist_agent import SpecialistAgent
+
         specialist = SpecialistAgent()
         specialist.load_knowledge("k8s_error_patterns")
         logger.info("Initialized SpecialistAgent with k8s_error_patterns knowledge")
@@ -96,6 +97,7 @@ def wire_and_start(
             logger.warning("TELEGRAM_BOT_TOKEN not provided, notifications disabled")
         else:
             from .telegram_notifier import TelegramNotifier
+
             notifier = TelegramNotifier(
                 bot_token=token,
                 default_chat_id=default_chat_id,
@@ -130,44 +132,44 @@ def wire_and_start(
     # Start monitoring
     k8s_monitor.start()
     logger.info("K8s monitoring started successfully (v%s)", __version__)
-    
-    return k8s_monitor, pod_monitor
 
+    return k8s_monitor, pod_monitor
 
 
 def validate_configuration() -> tuple[bool, list[str]]:
     """
     Validate required environment variables and configuration.
-    
+
     Returns:
         (is_valid, error_messages)
     """
     errors = []
-    
+
     # Check for Telegram bot token
     if not os.environ.get("TELEGRAM_BOT_TOKEN"):
         errors.append("TELEGRAM_BOT_TOKEN environment variable not set")
-    
+
     # Check for kubeconfig (optional, can use in-cluster config)
     kubeconfig_path = os.environ.get("KUBECONFIG")
     if kubeconfig_path and not Path(kubeconfig_path).exists():
         errors.append(f"KUBECONFIG file not found: {kubeconfig_path}")
-    
+
     # Check for manifest file
     manifest_path = os.environ.get("K8S_MANIFEST_PATH", "superpowers/n8n/manifest.json")
     if not Path(manifest_path).exists():
         errors.append(f"Manifest file not found: {manifest_path}")
-    
+
     return len(errors) == 0, errors
 
 
 def setup_signal_handlers() -> None:
     """Setup signal handlers for graceful shutdown."""
+
     def signal_handler(signum, frame):
         logger.info("Received signal %d, initiating graceful shutdown...", signum)
         shutdown()
         sys.exit(0)
-    
+
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     logger.info("Signal handlers registered for graceful shutdown")
@@ -176,9 +178,9 @@ def setup_signal_handlers() -> None:
 def shutdown() -> None:
     """Gracefully shutdown all components."""
     global _k8s_monitor, _pod_monitor, _notifier
-    
+
     logger.info("Shutting down n8n-k8s-monitoring...")
-    
+
     # Stop K8sEventMonitor
     if _k8s_monitor:
         try:
@@ -186,7 +188,7 @@ def shutdown() -> None:
             logger.info("K8sEventMonitor stopped")
         except Exception as e:
             logger.error("Error stopping K8sEventMonitor: %s", e)
-    
+
     # Process any remaining queued messages
     if _notifier and hasattr(_notifier, "process_queue"):
         try:
@@ -194,21 +196,21 @@ def shutdown() -> None:
             logger.info("Processed %d queued messages before shutdown", sent)
         except Exception as e:
             logger.error("Error processing message queue: %s", e)
-    
+
     logger.info("Shutdown complete")
 
 
 def main() -> int:
     """
     Main entry point for n8n-k8s-monitoring application.
-    
+
     Reads configuration from environment variables:
     - TELEGRAM_BOT_TOKEN (required): Telegram bot authentication token
     - KUBECONFIG (optional): Path to kubeconfig file
     - K8S_MANIFEST_PATH (optional): Path to manifest.json (default: superpowers/n8n/manifest.json)
     - TELEGRAM_DEFAULT_CHAT_ID (optional): Default chat ID for notifications
     - LOG_LEVEL (optional): Logging level (default: INFO)
-    
+
     Returns:
         Exit code (0 = success, 1 = error)
     """
@@ -217,15 +219,13 @@ def main() -> int:
     logging.basicConfig(
         level=getattr(logging, log_level, logging.INFO),
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.StreamHandler(sys.stdout)
-        ]
+        handlers=[logging.StreamHandler(sys.stdout)],
     )
-    
+
     logger.info("=" * 60)
     logger.info("n8n-k8s-monitoring v%s", __version__)
     logger.info("=" * 60)
-    
+
     # Validate configuration
     is_valid, errors = validate_configuration()
     if not is_valid:
@@ -234,25 +234,25 @@ def main() -> int:
             logger.error("  - %s", error)
         logger.error("Please set required environment variables and try again")
         return 1
-    
+
     logger.info("Configuration validation passed")
-    
+
     # Setup signal handlers for graceful shutdown
     setup_signal_handlers()
-    
+
     # Get configuration from environment
     manifest_path = os.environ.get("K8S_MANIFEST_PATH", "superpowers/n8n/manifest.json")
     kubeconfig_path = os.environ.get("KUBECONFIG")
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     default_chat_id_str = os.environ.get("TELEGRAM_DEFAULT_CHAT_ID")
     default_chat_id = int(default_chat_id_str) if default_chat_id_str else None
-    
+
     logger.info("Configuration:")
     logger.info("  Manifest: %s", manifest_path)
     logger.info("  Kubeconfig: %s", kubeconfig_path or "in-cluster/default")
     logger.info("  Default Chat ID: %s", default_chat_id or "not set")
     logger.info("  Log Level: %s", log_level)
-    
+
     try:
         # Wire and start all components
         k8s_monitor, pod_monitor = wire_and_start(
@@ -261,16 +261,16 @@ def main() -> int:
             bot_token=bot_token,
             default_chat_id=default_chat_id,
         )
-        
+
         logger.info("=" * 60)
         logger.info("n8n-k8s-monitoring is running")
         logger.info("Press Ctrl+C to stop")
         logger.info("=" * 60)
-        
+
         # Keep the main thread alive
         while True:
             time.sleep(1)
-            
+
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt received")
         shutdown()

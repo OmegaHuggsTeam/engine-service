@@ -292,12 +292,12 @@ Para considerar o sistema estável:
 class CustomMonitor:
     def __init__(self):
         self.metrics = []
-    
+
     def sample(self):
         # Coletar métrica
         metric = get_custom_metric()
         self.metrics.append(metric)
-    
+
     def get_statistics(self):
         return {
             "avg": sum(self.metrics) / len(self.metrics),
@@ -314,10 +314,10 @@ def perform_custom_recovery(self):
     try:
         # Limpar recursos específicos
         clear_custom_cache()
-        
+
         # Reiniciar componente
         restart_component()
-        
+
         return True
     except Exception as e:
         logger.error("Recovery failed: %s", e)

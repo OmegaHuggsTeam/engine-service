@@ -35,14 +35,14 @@ def soul_snatch_playwright(url, selector, prop, value):
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
         page.goto(url)
-        
+
         # Injetar script para manipular Fiber
         script = f"""
         const element = document.querySelector('{selector}');
-        const fiberKey = Object.keys(element).find(k => 
+        const fiberKey = Object.keys(element).find(k =>
             k.startsWith('__reactFiber$')
         );
-        
+
         if (fiberKey) {{
             const fiber = element[fiberKey];
             if (fiber.memoizedProps) {{
@@ -53,7 +53,7 @@ def soul_snatch_playwright(url, selector, prop, value):
             }}
         }}
         """
-        
+
         page.evaluate(script)
         browser.close()
 ```
@@ -98,16 +98,16 @@ async def ghost_click_pyppeteer(url, selector):
     """Click sem telemetria com Pyppeteer."""
     browser = await launch(headless=False)
     page = await browser.newPage()
-    
+
     # Aplicar stealth
     await stealth(page)
-    
+
     await page.goto(url)
-    
+
     # Ghost click (sem event listeners)
     await page.evaluate(f"""
         const element = document.querySelector('{selector}');
-        
+
         // Salvar listeners
         const savedListeners = {{}};
         for (let key in element) {{
@@ -116,10 +116,10 @@ async def ghost_click_pyppeteer(url, selector):
                 element[key] = null;
             }}
         }}
-        
+
         // Click
         element.click();
-        
+
         // Restaurar
         setTimeout(() => {{
             for (let key in savedListeners) {{
@@ -127,7 +127,7 @@ async def ghost_click_pyppeteer(url, selector):
             }}
         }}, 10);
     """)
-    
+
     await browser.close()
 
 # Executar
@@ -173,16 +173,16 @@ def matrix_backdoor_drission(url, selector):
     """CDP injection com DrissionPage."""
     page = ChromiumPage()
     page.get(url)
-    
+
     # Usar CDP diretamente
-    result = page.run_cdp('Runtime.evaluate', 
+    result = page.run_cdp('Runtime.evaluate',
         expression=f"""
         const element = document.querySelector('{selector}');
         element.click();
         """,
         userGesture=True  # 🔑 Trusted click
     )
-    
+
     page.quit()
     return result
 
@@ -190,22 +190,22 @@ def matrix_backdoor_drission(url, selector):
 def hybrid_navigation(url):
     """Navegação híbrida (DOM + HTTP)."""
     page = ChromiumPage()
-    
+
     # 1. Carregar página (DOM)
     page.get(url)
-    
+
     # 2. Extrair token via DOM
     token = page.ele('input[name="csrf_token"]').attr('value')
-    
+
     # 3. Fazer requisição HTTP direta (sem recarregar)
     response = page.session.post(
         'https://api.example.com/data',
         headers={'X-CSRF-Token': token}
     )
-    
+
     # 4. Voltar para DOM
     page.ele('button.next').click()
-    
+
     page.quit()
 ```
 
@@ -248,27 +248,27 @@ def exfiltrate_cookies_fast(domain):
     """Extrai cookies de navegador fechado."""
     # Extrair cookies do Chrome
     cookies = browser_cookie3.chrome(domain_name=domain)
-    
+
     # Usar em requisição
     response = requests.get(
         f'https://{domain}/api/data',
         cookies=cookies
     )
-    
+
     return response.json()
 
 def clone_session_fast(source_domain, target_url):
     """Clona sessão entre domínios."""
     # 1. Extrair cookies do source
     cookies = browser_cookie3.chrome(domain_name=source_domain)
-    
+
     # 2. Criar sessão requests
     session = requests.Session()
     session.cookies.update(cookies)
-    
+
     # 3. Usar em target
     response = session.get(target_url)
-    
+
     return response
 
 # Exemplo: Salto instantâneo
@@ -276,14 +276,14 @@ def instant_zone_jump():
     """Salta entre zonas sem abrir navegador."""
     # Extrair sessão do Gmail
     gmail_cookies = browser_cookie3.chrome(domain_name='gmail.com')
-    
+
     # Usar em API do Google
     session = requests.Session()
     session.cookies.update(gmail_cookies)
-    
+
     # Acessar Google Drive sem login
     drive_response = session.get('https://drive.google.com/drive/my-drive')
-    
+
     return drive_response
 ```
 
@@ -323,13 +323,13 @@ import lxml
 def map_dom_offline(html_source):
     """Mapeia DOM completo em RAM."""
     soup = BeautifulSoup(html_source, 'lxml')
-    
+
     # Encontrar todos os iframes
     iframes = soup.find_all('iframe')
-    
+
     # Encontrar shadow roots (via atributos)
     shadow_hosts = soup.find_all(attrs={'shadowroot': True})
-    
+
     # Mapear estrutura
     dom_map = {
         'iframes': [
@@ -349,20 +349,20 @@ def map_dom_offline(html_source):
             for host in shadow_hosts
         ]
     }
-    
+
     return dom_map
 
 def blitz_recon(driver):
     """Reconhecimento ultra-rápido."""
     # 1. Capturar HTML
     html = driver.page_source
-    
+
     # 2. Processar offline (não bloqueia driver)
     dom_map = map_dom_offline(html)
-    
+
     # 3. Enquanto isso, driver continua
     driver.find_element(By.CSS_SELECTOR, 'button.next').click()
-    
+
     return dom_map
 ```
 
@@ -387,40 +387,40 @@ import json
 
 class BlitzRecon:
     """Reconhecimento ultra-rápido em 4 turnos."""
-    
+
     def __init__(self, url):
         self.url = url
         self.page = ChromiumPage()
         self.matrix_map = {}
-    
+
     def turno_1_clarao(self):
         """
         Turno 1: O Clarão (DrissionPage)
-        
+
         Snapshot ultra-rápido via CDP sem renderizar imagens/CSS.
         """
         # Desabilitar imagens e CSS
         self.page.set.load_mode.none()  # Não carregar recursos
-        
+
         # Capturar snapshot via CDP
         snapshot = self.page.run_cdp('DOMSnapshot.captureSnapshot', {
             'computedStyles': [],
             'includePaintOrder': False,
             'includeDOMRects': True
         })
-        
+
         self.matrix_map['snapshot'] = snapshot
         return snapshot
-    
+
     def turno_2_analise(self):
         """
         Turno 2: A Análise (BeautifulSoup/lxml)
-        
+
         Processar árvore offline e identificar iframes e shadow-roots.
         """
         html = self.page.html
         soup = BeautifulSoup(html, 'lxml')
-        
+
         # Identificar iframes
         iframes = [
             {
@@ -430,12 +430,12 @@ class BlitzRecon:
             }
             for iframe in soup.find_all('iframe')
         ]
-        
+
         # Identificar shadow roots (heurística)
         potential_shadows = soup.find_all(
             lambda tag: tag.name and '-' in tag.name  # Web components
         )
-        
+
         shadow_roots = [
             {
                 'selector': f"{tag.name}#{tag.get('id')}" if tag.get('id') else tag.name,
@@ -444,40 +444,40 @@ class BlitzRecon:
             }
             for tag in potential_shadows
         ]
-        
+
         self.matrix_map['iframes'] = iframes
         self.matrix_map['shadow_roots'] = shadow_roots
-        
+
         return {'iframes': iframes, 'shadow_roots': shadow_roots}
-    
+
     def turno_3_grampo(self):
         """
         Turno 3: O Grampo (Playwright/Fiber)
-        
+
         Injetar script de 1 linha para extrair rotas do React Fiber.
         """
         script = """
         // Extrair rotas do React Fiber
         const root = document.querySelector('#root');
         if (!root) return null;
-        
-        const fiberKey = Object.keys(root).find(k => 
+
+        const fiberKey = Object.keys(root).find(k =>
             k.startsWith('__reactFiber$')
         );
-        
+
         if (!fiberKey) return null;
-        
+
         const fiber = root[fiberKey];
-        
+
         // Extrair rotas (simplificado)
         function extractRoutes(node, routes = []) {
             if (!node) return routes;
-            
+
             // Verificar se é componente de rota
-            if (node.type && node.type.name && 
-                (node.type.name.includes('Route') || 
+            if (node.type && node.type.name &&
+                (node.type.name.includes('Route') ||
                  node.type.name.includes('Router'))) {
-                
+
                 if (node.memoizedProps && node.memoizedProps.path) {
                     routes.push({
                         path: node.memoizedProps.path,
@@ -485,26 +485,26 @@ class BlitzRecon:
                     });
                 }
             }
-            
+
             // Recursivo
             if (node.child) extractRoutes(node.child, routes);
             if (node.sibling) extractRoutes(node.sibling, routes);
-            
+
             return routes;
         }
-        
+
         return extractRoutes(fiber);
         """
-        
+
         routes = self.page.run_js(script)
         self.matrix_map['react_routes'] = routes
-        
+
         return routes
-    
+
     def turno_4_consolidacao(self):
         """
         Turno 4: A Consolidação (RAG)
-        
+
         Enviar resultado para Matrix Map como mapa pronto.
         """
         # Consolidar tudo em estrutura Matrix Map
@@ -512,7 +512,7 @@ class BlitzRecon:
             'url': self.url,
             'zones': []
         }
-        
+
         # Adicionar zonas de iframes
         for iframe in self.matrix_map.get('iframes', []):
             consolidated['zones'].append({
@@ -522,7 +522,7 @@ class BlitzRecon:
                 'type': 'iframe',
                 'exits': []
             })
-        
+
         # Adicionar zonas de shadow roots
         for shadow in self.matrix_map.get('shadow_roots', []):
             consolidated['zones'].append({
@@ -532,7 +532,7 @@ class BlitzRecon:
                 'type': 'shadow',
                 'exits': []
             })
-        
+
         # Adicionar rotas React
         for route in self.matrix_map.get('react_routes', []):
             consolidated['zones'].append({
@@ -542,38 +542,38 @@ class BlitzRecon:
                 'type': 'route',
                 'exits': []
             })
-        
+
         # Salvar em arquivo
         with open('.matrix_map.json', 'w') as f:
             json.dump(consolidated, f, indent=2)
-        
+
         return consolidated
-    
+
     def execute_blitz(self):
         """Executa reconhecimento completo em 4 turnos."""
         print("🌑 Iniciando Blitz Recon...")
-        
+
         # Navegar para URL
         self.page.get(self.url)
-        
+
         # Turno 1
         print("⚡ Turno 1: O Clarão (Snapshot)")
         self.turno_1_clarao()
-        
+
         # Turno 2
         print("🔍 Turno 2: A Análise (Offline)")
         self.turno_2_analise()
-        
+
         # Turno 3
         print("🎯 Turno 3: O Grampo (Fiber)")
         self.turno_3_grampo()
-        
+
         # Turno 4
         print("📊 Turno 4: A Consolidação (RAG)")
         result = self.turno_4_consolidacao()
-        
+
         print("✅ Blitz Recon completo!")
-        
+
         self.page.quit()
         return result
 

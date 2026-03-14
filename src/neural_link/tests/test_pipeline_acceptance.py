@@ -8,14 +8,11 @@ Orchestrator, cache, quality_gate, and cost_tracker are real instances.
 import time
 from unittest.mock import patch
 
-import pytest
-
 from src.neural_link.orchestrator.core import NeuralLinkOrchestrator
+from src.neural_link.orchestrator.models import Task, TaskResult, TaskType
 from src.neural_link.orchestrator.pipeline_cache import PipelineCache
 from src.neural_link.orchestrator.quality_gate import QualityGate
-from src.neural_link.orchestrator.models import Task, TaskType, TaskResult
 from src.neural_link.telemetry.cost_tracker import CostTracker
-
 
 # ==================================================================
 # TestLayer0Acceptance
@@ -69,7 +66,6 @@ class TestLayer0Acceptance:
         stats = orch.cost_stats
         assert stats["total_requests"] >= 2
         # Second request should be cache hit - no additional LLM
-        cache_hits = sum(1 for _ in range(2) if r2.tasks == [])
         assert r2.tasks == []
 
     def test_cost_profile_shows_cache_hit_zero_llm(self):
@@ -80,7 +76,7 @@ class TestLayer0Acceptance:
         tracker = CostTracker()
         orch = NeuralLinkOrchestrator(pipeline_cache=cache, cost_tracker=tracker)
 
-        with patch("src.utils.llm_client.chat_completion") as mock_llm:
+        with patch("src.utils.llm_client.chat_completion"):
             response = orch.process("cached question")
 
         assert response.answer == "cached answer"
@@ -219,12 +215,18 @@ class TestLayer3Acceptance:
                 "src.neural_link.orchestrator.task_decomposer.TaskDecomposer._decompose_with_llm"
             ) as mock_decompose:
                 from src.neural_link.orchestrator.models import Task, TaskType
+
                 mock_decompose.return_value = [
                     Task(id="t1", description="task", type=TaskType.GENERATION, priority=5),
                 ]
-                with patch("src.neural_link.orchestrator.task_executor.TaskExecutor.execute") as mock_exec:
+                with patch(
+                    "src.neural_link.orchestrator.task_executor.TaskExecutor.execute"
+                ) as mock_exec:
                     mock_exec.return_value = TaskResult(
-                        task_id="t1", success=True, output="Generated content", agent_used="crm_backend"
+                        task_id="t1",
+                        success=True,
+                        output="Generated content",
+                        agent_used="crm_backend",
                     )
                     orch.process("First analyze data then generate report")
 
@@ -260,7 +262,9 @@ class TestLayer3Acceptance:
                     Task(id="t1", description="a", type=TaskType.QUERY, priority=5),
                     Task(id="t2", description="b", type=TaskType.QUERY, priority=4),
                 ]
-                with patch("src.neural_link.orchestrator.task_executor.TaskExecutor.execute") as mock_exec:
+                with patch(
+                    "src.neural_link.orchestrator.task_executor.TaskExecutor.execute"
+                ) as mock_exec:
                     mock_exec.return_value = TaskResult(
                         task_id="t1", success=True, output="Out", agent_used="x"
                     )
@@ -312,7 +316,11 @@ class TestCostRegression:
 
     def test_triage_uses_fast_model(self):
         """8b model used for triage when available (decomposition tier)."""
-        from src.neural_link.orchestrator.model_tier import get_operation_model, DECOMPOSITION_TIER, TIER_MODELS
+        from src.neural_link.orchestrator.model_tier import (
+            DECOMPOSITION_TIER,
+            TIER_MODELS,
+            get_operation_model,
+        )
 
         model = get_operation_model("decomposition")
         assert "8b" in model or TIER_MODELS[DECOMPOSITION_TIER] == model
@@ -377,7 +385,7 @@ class TestDecisionTreeInCore:
     """DecisionTree is integrated into process() - classify() is called."""
 
     def test_classify_called_in_process(self):
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
 
         cache = PipelineCache()
         cache._encoder = False
@@ -409,6 +417,7 @@ class TestDecisionTreeInCore:
     def test_layer_0_shortcut_behavior(self):
         """When DecisionTree classifies as layer 0, graph shortcut is used."""
         from unittest.mock import patch
+
         from src.neural_link.orchestrator.decision_tree import LayerDecision
 
         cache = PipelineCache()
@@ -425,21 +434,22 @@ class TestDecisionTreeInCore:
 
         # Verify DecisionTree was called
         mock_classify.assert_called_once_with("list agents")
-        
+
         # Verify decision_layer is set to 0
         last_profile = orch._cost_tracker._profiles[-1]
         assert last_profile.decision_layer == 0
-        
+
         # Verify graph shortcut was used (layers_reached should be 0)
         assert last_profile.layers_reached == 0
         assert last_profile.graph_shortcut is True
-        
+
         # Verify response contains agent list
         assert "agents" in response.answer.lower() or "agentes" in response.answer.lower()
 
     def test_layer_1_skip_decomposition(self):
         """When DecisionTree classifies as layer 1, LLM decomposition is skipped."""
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
+
         from src.neural_link.orchestrator.decision_tree import LayerDecision
 
         cache = PipelineCache()
@@ -452,31 +462,30 @@ class TestDecisionTreeInCore:
                 layer=1, reason="simple triage", estimated_cost=0.0001, requires_llm=True
             )
             with patch("src.utils.llm_client.chat_completion", return_value="Simple answer"):
-                with patch.object(
-                    orch._decomposer, "_decompose_with_llm"
-                ) as mock_decompose_llm:
+                with patch.object(orch._decomposer, "_decompose_with_llm") as mock_decompose_llm:
                     # Use a query that won't match graph shortcuts
                     response = orch.process("explain how the system works")
-                    
+
                     # Verify LLM decomposition was NOT called (layer 1 skip)
                     mock_decompose_llm.assert_not_called()
 
         # Verify DecisionTree was called
         mock_classify.assert_called_once_with("explain how the system works")
-        
+
         # Verify decision_layer is set to 1
         last_profile = orch._cost_tracker._profiles[-1]
         assert last_profile.decision_layer == 1
-        
+
         # Verify triage_resolved flag is set
         assert last_profile.triage_resolved is True
-        
+
         # Verify we got a response
         assert response.answer
 
     def test_layer_0_decision_logged_in_profile(self):
         """DecisionTree layer 0 classification is logged in RequestCostProfile."""
         from unittest.mock import patch
+
         from src.neural_link.orchestrator.decision_tree import LayerDecision
 
         cache = PipelineCache()
@@ -498,6 +507,7 @@ class TestDecisionTreeInCore:
     def test_layer_1_decision_logged_in_profile(self):
         """DecisionTree layer 1 classification is logged in RequestCostProfile."""
         from unittest.mock import patch
+
         from src.neural_link.orchestrator.decision_tree import LayerDecision
 
         cache = PipelineCache()
@@ -546,8 +556,12 @@ class TestAgentPersistence:
 
         write_calls = [c for c in mock_graph.execute_write.call_args_list]
         merge_agent_calls = [
-            c for c in write_calls
-            if c[0] and "MERGE" in str(c[0]) and "Agent" in str(c[0]) and "success_rate" in str(c[0])
+            c
+            for c in write_calls
+            if c[0]
+            and "MERGE" in str(c[0])
+            and "Agent" in str(c[0])
+            and "success_rate" in str(c[0])
         ]
         assert len(merge_agent_calls) >= 1 or mock_graph.execute_write.call_count >= 1
 
@@ -640,9 +654,7 @@ class TestExpandedShortcuts:
         from unittest.mock import MagicMock
 
         mock_graph = MagicMock()
-        mock_graph.execute_read.return_value = [
-            {"name": "Campaign Blast", "status": "in_progress"}
-        ]
+        mock_graph.execute_read.return_value = [{"name": "Campaign Blast", "status": "in_progress"}]
 
         cache = PipelineCache()
         cache._encoder = False
@@ -755,11 +767,12 @@ class TestBenchmarkQueries:
     def test_benchmark_queries_classify_correctly(self):
         import sys
         from pathlib import Path
+
         project_root = Path(__file__).resolve().parent.parent.parent.parent
         if str(project_root) not in sys.path:
             sys.path.insert(0, str(project_root))
-        from tools.benchmark_pipeline import BENCHMARK_QUERIES
         from src.neural_link.orchestrator.decision_tree import DecisionTree
+        from tools.benchmark_pipeline import BENCHMARK_QUERIES
 
         tree = DecisionTree()
         for item in BENCHMARK_QUERIES:
@@ -776,6 +789,7 @@ class TestBenchmarkScript:
         """Test that benchmark_pipeline.py runs successfully with mocked dependencies."""
         import sys
         from pathlib import Path
+
         project_root = Path(__file__).resolve().parent.parent.parent.parent
         if str(project_root) not in sys.path:
             sys.path.insert(0, str(project_root))
@@ -801,6 +815,7 @@ class TestBenchmarkScript:
         """Test that benchmark outputs valid JSON format."""
         import sys
         from pathlib import Path
+
         project_root = Path(__file__).resolve().parent.parent.parent.parent
         if str(project_root) not in sys.path:
             sys.path.insert(0, str(project_root))
@@ -811,6 +826,7 @@ class TestBenchmarkScript:
 
         # Verify JSON-serializable
         import json
+
         json_str = json.dumps(result)
         parsed = json.loads(json_str)
         assert parsed == result
@@ -819,6 +835,7 @@ class TestBenchmarkScript:
         """Test that benchmark includes queries for all 4 layers."""
         import sys
         from pathlib import Path
+
         project_root = Path(__file__).resolve().parent.parent.parent.parent
         if str(project_root) not in sys.path:
             sys.path.insert(0, str(project_root))
@@ -835,7 +852,8 @@ class TestBenchmarkScript:
         """Test that benchmark properly mocks LLM and Neo4j dependencies."""
         import sys
         from pathlib import Path
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
+
         project_root = Path(__file__).resolve().parent.parent.parent.parent
         if str(project_root) not in sys.path:
             sys.path.insert(0, str(project_root))
@@ -843,6 +861,7 @@ class TestBenchmarkScript:
 
         # Track if real LLM was called (it shouldn't be)
         llm_called = False
+
         def mock_llm(*args, **kwargs):
             nonlocal llm_called
             llm_called = True

@@ -14,10 +14,8 @@ from src.neural_link.agents.specialist_agent import (
     _build_context_block,
     _credential_to_env_var,
     _extract_expressions,
-    _load_chunks_from_json,
     _search_chunks,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures & helpers for explain_and_adapt tests
@@ -143,6 +141,7 @@ class TestSpecialistAgent:
         chunk_a = {"content": "Trigger: webhook recebe evento", "source_file": "A"}
         chunk_b = {"content": "Action: enviar email", "source_file": "B"}
         from unittest.mock import patch
+
         with patch.object(agent, "_invoke_llm", return_value="Conexão: webhook -> email"):
             result = agent.execute(
                 "propor fluxo",
@@ -228,18 +227,12 @@ class TestExtractExpressions:
         assert _extract_expressions(raw) == []
 
     def test_dedup(self):
-        raw = (
-            """{"a": "={{ $('X').item.json.f1 }}", """
-            """"b": "={{ $('X').item.json.f1 }}"}"""
-        )
+        raw = """{"a": "={{ $('X').item.json.f1 }}", """ """"b": "={{ $('X').item.json.f1 }}"}"""
         result = _extract_expressions(raw)
         assert len(result) == 1
 
     def test_multiple_different(self):
-        raw = (
-            """{"a": "={{ $('A').item.json.name }}", """
-            """"b": "={{ $('B').item.json.age }}"}"""
-        )
+        raw = """{"a": "={{ $('A').item.json.name }}", """ """"b": "={{ $('B').item.json.age }}"}"""
         result = _extract_expressions(raw)
         assert len(result) == 2
         nodes = {r["node"] for r in result}
@@ -296,7 +289,9 @@ class TestExplainAndAdapt:
         raw = json.dumps(WORKFLOW_WITH_CREDS)
         mock_client = _mock_httpx_response(raw)
 
-        with patch("src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client):
+        with patch(
+            "src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client
+        ):
             result = agent.explain_and_adapt("https://example.com/wf.json")
 
         assert "*Test Automation*" in result
@@ -311,7 +306,9 @@ class TestExplainAndAdapt:
         raw = json.dumps(WORKFLOW_WITH_CREDS)
         mock_client = _mock_httpx_response(raw)
 
-        with patch("src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client):
+        with patch(
+            "src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client
+        ):
             result = agent.explain_and_adapt("https://example.com/wf.json")
 
         assert "Variaveis .env necessarias:" in result
@@ -323,7 +320,9 @@ class TestExplainAndAdapt:
         raw = json.dumps(WORKFLOW_WITH_CREDS)
         mock_client = _mock_httpx_response(raw)
 
-        with patch("src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client):
+        with patch(
+            "src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client
+        ):
             result = agent.explain_and_adapt("https://example.com/wf.json")
 
         assert "$env." in result
@@ -337,7 +336,9 @@ class TestExplainAndAdapt:
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
 
-        with patch("src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client):
+        with patch(
+            "src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client
+        ):
             result = agent.explain_and_adapt("https://bad-url.com/wf.json")
 
         assert "*Erro ao baixar workflow:*" in result
@@ -347,7 +348,9 @@ class TestExplainAndAdapt:
         agent = self._make_agent()
         mock_client = _mock_httpx_response("not valid json {{{")
 
-        with patch("src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client):
+        with patch(
+            "src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client
+        ):
             result = agent.explain_and_adapt("https://example.com/bad.json")
 
         assert "*Erro ao parsear JSON:*" in result
@@ -357,7 +360,9 @@ class TestExplainAndAdapt:
         agent = self._make_agent()
         mock_client = _mock_httpx_response('{"foo": "bar"}')
 
-        with patch("src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client):
+        with patch(
+            "src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client
+        ):
             result = agent.explain_and_adapt("https://example.com/other.json")
 
         assert "*Erro:*" in result
@@ -369,13 +374,14 @@ class TestExplainAndAdapt:
         raw = json.dumps(WORKFLOW_WITH_CREDS)
         mock_client = _mock_httpx_response(raw)
 
-        with patch("src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client):
+        with patch(
+            "src.neural_link.agents.specialist_agent.httpx.Client", return_value=mock_client
+        ):
             result = agent.explain_and_adapt("https://example.com/wf.json")
 
         assert "*Credenciais*" in result
         assert "`groqApi`" in result
         assert "`GROQ_API`" in result
-
 
 
 # ---------------------------------------------------------------------------
@@ -402,10 +408,12 @@ class TestAnalyzePodLogs:
         """analyze_pod_logs loads k8s_error_patterns knowledge base by default."""
         agent = SpecialistAgent()
         sample_logs = "Error: connection refused to database:5432"
-        
-        with patch.object(agent, "execute", return_value="Connection error detected") as mock_execute:
-            result = agent.analyze_pod_logs(sample_logs, pod_name="test-pod", namespace="default")
-            
+
+        with patch.object(
+            agent, "execute", return_value="Connection error detected"
+        ) as mock_execute:
+            agent.analyze_pod_logs(sample_logs, pod_name="test-pod", namespace="default")
+
             # Verify execute was called with k8s_error_patterns
             mock_execute.assert_called_once()
             call_kwargs = mock_execute.call_args[1]
@@ -415,14 +423,10 @@ class TestAnalyzePodLogs:
         """Pod name and namespace are included in analysis prompt."""
         agent = SpecialistAgent()
         sample_logs = "Fatal error occurred"
-        
+
         with patch.object(agent, "execute", return_value="Analysis result") as mock_execute:
-            agent.analyze_pod_logs(
-                sample_logs,
-                pod_name="neo4j-0",
-                namespace="bunker"
-            )
-            
+            agent.analyze_pod_logs(sample_logs, pod_name="neo4j-0", namespace="bunker")
+
             # Verify the task includes pod context
             call_args = mock_execute.call_args[0]
             task = call_args[0]
@@ -433,10 +437,10 @@ class TestAnalyzePodLogs:
         """Exceptions during analysis are caught and returned as error message."""
         agent = SpecialistAgent()
         sample_logs = "Some error logs"
-        
+
         with patch.object(agent, "execute", side_effect=Exception("LLM timeout")):
             result = agent.analyze_pod_logs(sample_logs)
-            
+
             assert "Falha na análise" in result
             assert "LLM timeout" in result
 
@@ -444,13 +448,10 @@ class TestAnalyzePodLogs:
         """Custom chunk_type can be specified for specialized analysis."""
         agent = SpecialistAgent()
         sample_logs = "n8n workflow error"
-        
+
         with patch.object(agent, "execute", return_value="n8n analysis") as mock_execute:
-            agent.analyze_pod_logs(
-                sample_logs,
-                chunk_type="n8n_master_context"
-            )
-            
+            agent.analyze_pod_logs(sample_logs, chunk_type="n8n_master_context")
+
             call_kwargs = mock_execute.call_args[1]
             assert call_kwargs.get("chunk_type") == "n8n_master_context"
 
@@ -458,10 +459,10 @@ class TestAnalyzePodLogs:
         """Very long logs are truncated to 4000 characters."""
         agent = SpecialistAgent()
         long_logs = "Error line\n" * 1000  # Much longer than 4000 chars
-        
+
         with patch.object(agent, "execute", return_value="Analysis") as mock_execute:
             agent.analyze_pod_logs(long_logs)
-            
+
             call_args = mock_execute.call_args[0]
             task = call_args[0]
             # The logs in the task should be truncated

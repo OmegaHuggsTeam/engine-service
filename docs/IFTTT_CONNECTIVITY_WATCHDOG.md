@@ -210,10 +210,10 @@ success, message = connector.send_alert(
 while True:
     # Processar retries pendentes
     retries_processed = connector.process_retries()
-    
+
     if retries_processed > 0:
         print(f"Processed {retries_processed} retry(ies)")
-    
+
     # Aguardar próximo ciclo
     time.sleep(10)
 ```
@@ -352,13 +352,13 @@ stats = connector.get_statistics()
 
 # Taxa de sucesso
 success_rate = (
-    stats['total_alerts_sent'] / 
+    stats['total_alerts_sent'] /
     (stats['total_alerts_sent'] + stats['total_alerts_failed']) * 100
 )
 
 # Taxa de retry
 retry_rate = (
-    stats['total_retries'] / 
+    stats['total_retries'] /
     stats['total_alerts_sent']
 )
 

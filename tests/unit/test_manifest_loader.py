@@ -5,8 +5,9 @@ Tests specific examples, edge cases, and error conditions for manifest loading a
 """
 
 import json
+
 import pytest
-from pathlib import Path
+
 from src.neural_link.k8s_monitoring.manifest_loader import ManifestLoader
 
 
@@ -28,13 +29,11 @@ def valid_manifest():
                     "resource_type": "Pod",
                     "namespace": "*",
                     "event_types": ["MODIFIED"],
-                    "filters": {
-                        "status.phase": "Failed"
-                    },
-                    "handler": "handle_pod_crash"
+                    "filters": {"status.phase": "Failed"},
+                    "handler": "handle_pod_crash",
                 }
             ]
-        }
+        },
     }
 
 
@@ -65,7 +64,7 @@ class TestLoadManifest:
         invalid_file = tmp_path / "invalid.json"
         with open(invalid_file, "w") as f:
             f.write("{ invalid json }")
-        
+
         with pytest.raises(json.JSONDecodeError):
             manifest_loader.load_manifest(str(invalid_file))
 
@@ -74,7 +73,7 @@ class TestLoadManifest:
         empty_file = tmp_path / "empty.json"
         with open(empty_file, "w") as f:
             f.write("")
-        
+
         with pytest.raises(json.JSONDecodeError):
             manifest_loader.load_manifest(str(empty_file))
 
@@ -119,14 +118,7 @@ class TestValidateHooks:
     def test_validate_missing_resource_type(self, manifest_loader):
         """Test validating a hook missing resource_type."""
         manifest = {
-            "hooks": {
-                "on_k8s_event": [
-                    {
-                        "event_types": ["MODIFIED"],
-                        "handler": "test_handler"
-                    }
-                ]
-            }
+            "hooks": {"on_k8s_event": [{"event_types": ["MODIFIED"], "handler": "test_handler"}]}
         }
         with pytest.raises(ValueError, match="missing required field: resource_type"):
             manifest_loader.validate_hooks(manifest)
@@ -134,14 +126,7 @@ class TestValidateHooks:
     def test_validate_missing_event_types(self, manifest_loader):
         """Test validating a hook missing event_types."""
         manifest = {
-            "hooks": {
-                "on_k8s_event": [
-                    {
-                        "resource_type": "Pod",
-                        "handler": "test_handler"
-                    }
-                ]
-            }
+            "hooks": {"on_k8s_event": [{"resource_type": "Pod", "handler": "test_handler"}]}
         }
         with pytest.raises(ValueError, match="missing required field: event_types"):
             manifest_loader.validate_hooks(manifest)
@@ -149,14 +134,7 @@ class TestValidateHooks:
     def test_validate_missing_handler(self, manifest_loader):
         """Test validating a hook missing handler."""
         manifest = {
-            "hooks": {
-                "on_k8s_event": [
-                    {
-                        "resource_type": "Pod",
-                        "event_types": ["MODIFIED"]
-                    }
-                ]
-            }
+            "hooks": {"on_k8s_event": [{"resource_type": "Pod", "event_types": ["MODIFIED"]}]}
         }
         with pytest.raises(ValueError, match="missing required field: handler"):
             manifest_loader.validate_hooks(manifest)
@@ -166,11 +144,7 @@ class TestValidateHooks:
         manifest = {
             "hooks": {
                 "on_k8s_event": [
-                    {
-                        "resource_type": "",
-                        "event_types": ["MODIFIED"],
-                        "handler": "test_handler"
-                    }
+                    {"resource_type": "", "event_types": ["MODIFIED"], "handler": "test_handler"}
                 ]
             }
         }
@@ -182,11 +156,7 @@ class TestValidateHooks:
         manifest = {
             "hooks": {
                 "on_k8s_event": [
-                    {
-                        "resource_type": "Pod",
-                        "event_types": [],
-                        "handler": "test_handler"
-                    }
+                    {"resource_type": "Pod", "event_types": [], "handler": "test_handler"}
                 ]
             }
         }
@@ -201,7 +171,7 @@ class TestValidateHooks:
                     {
                         "resource_type": "Pod",
                         "event_types": ["INVALID_TYPE"],
-                        "handler": "test_handler"
+                        "handler": "test_handler",
                     }
                 ]
             }
@@ -214,11 +184,7 @@ class TestValidateHooks:
         manifest = {
             "hooks": {
                 "on_k8s_event": [
-                    {
-                        "resource_type": "Pod",
-                        "event_types": ["MODIFIED"],
-                        "handler": ""
-                    }
+                    {"resource_type": "Pod", "event_types": ["MODIFIED"], "handler": ""}
                 ]
             }
         }
@@ -234,7 +200,7 @@ class TestValidateHooks:
                         "resource_type": "Pod",
                         "event_types": ["MODIFIED"],
                         "handler": "test_handler",
-                        "namespace": ""
+                        "namespace": "",
                     }
                 ]
             }
@@ -251,7 +217,7 @@ class TestValidateHooks:
                         "resource_type": "Pod",
                         "event_types": ["MODIFIED"],
                         "handler": "test_handler",
-                        "filters": "not a dict"
+                        "filters": "not a dict",
                     }
                 ]
             }
@@ -264,16 +230,12 @@ class TestValidateHooks:
         manifest = {
             "hooks": {
                 "on_k8s_event": [
-                    {
-                        "resource_type": "Pod",
-                        "event_types": ["MODIFIED"],
-                        "handler": "handle_pod"
-                    },
+                    {"resource_type": "Pod", "event_types": ["MODIFIED"], "handler": "handle_pod"},
                     {
                         "resource_type": "Service",
                         "event_types": ["ADDED", "DELETED"],
-                        "handler": "handle_service"
-                    }
+                        "handler": "handle_service",
+                    },
                 ]
             }
         }
@@ -287,7 +249,7 @@ class TestValidateHooks:
                     {
                         "resource_type": "Pod",
                         "event_types": ["ADDED", "MODIFIED", "DELETED"],
-                        "handler": "handle_all"
+                        "handler": "handle_all",
                     }
                 ]
             }
@@ -328,16 +290,12 @@ class TestGetK8sHooks:
         manifest = {
             "hooks": {
                 "on_k8s_event": [
-                    {
-                        "resource_type": "Pod",
-                        "event_types": ["MODIFIED"],
-                        "handler": "handle_pod"
-                    },
+                    {"resource_type": "Pod", "event_types": ["MODIFIED"], "handler": "handle_pod"},
                     {
                         "resource_type": "Service",
                         "event_types": ["ADDED"],
-                        "handler": "handle_service"
-                    }
+                        "handler": "handle_service",
+                    },
                 ]
             }
         }
@@ -359,17 +317,17 @@ class TestIntegration:
     def test_load_and_validate_real_manifest(self, manifest_loader):
         """Test loading and validating the actual manifest.json file."""
         manifest_path = "superpowers/n8n/manifest.json"
-        
+
         # Load the manifest
         manifest = manifest_loader.load_manifest(manifest_path)
-        
+
         # Validate it
         assert manifest_loader.validate_hooks(manifest) is True
-        
+
         # Extract hooks
         hooks = manifest_loader.get_k8s_hooks(manifest)
         assert len(hooks) >= 1
-        
+
         # Verify first hook structure
         first_hook = hooks[0]
         assert "resource_type" in first_hook
@@ -381,10 +339,10 @@ class TestIntegration:
         # Load
         loaded = manifest_loader.load_manifest(temp_manifest_file)
         assert loaded == valid_manifest
-        
+
         # Validate
         assert manifest_loader.validate_hooks(loaded) is True
-        
+
         # Extract
         hooks = manifest_loader.get_k8s_hooks(loaded)
         assert len(hooks) == 1

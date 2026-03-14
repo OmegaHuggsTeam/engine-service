@@ -20,10 +20,11 @@ import json
 import logging
 import time
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRouter
 from pydantic import BaseModel, Field
@@ -45,6 +46,7 @@ class AgentStatus(BaseModel):
 
 class AgentCreateRequest(BaseModel):
     """Request body for creating/registering a custom agent."""
+
     id: str
     name: str
     type: str = "custom"  # domain | specialist | operator | custom
@@ -55,6 +57,7 @@ class AgentCreateRequest(BaseModel):
 
 class AgentUpdateRequest(BaseModel):
     """Request body for updating an existing agent."""
+
     name: str | None = None
     type: str | None = None
     capabilities: list[str] | None = None
@@ -118,6 +121,7 @@ class FlowComposeResult(BaseModel):
 
 class FlowDeployRequest(BaseModel):
     """Workflow JSON para injetar no n8n e ativar."""
+
     workflow: dict[str, Any]
 
 
@@ -129,8 +133,10 @@ class FlowDeployResult(BaseModel):
 
 # -- Jitbit Macro -----------------------------------------------------------
 
+
 class JitbitErrorBody(BaseModel):
     """Payload do webhook POST /api/v1/jitbit/error (n8n / macro)."""
+
     macro: str = ""
     error: str = ""
     step: str = ""
@@ -138,6 +144,7 @@ class JitbitErrorBody(BaseModel):
 
 
 # -- CRM models -------------------------------------------------------------
+
 
 class CrmLeadCreate(BaseModel):
     name: str
@@ -223,6 +230,7 @@ class CrmStatsResponse(BaseModel):
 
 # -- KPI models -------------------------------------------------------------
 
+
 class KpiToolReviewSubmit(BaseModel):
     tool_name: str
     sprint_date: str
@@ -247,6 +255,69 @@ class KpiRecommendResponse(BaseModel):
     reason: str = ""
 
 
+# -- Container Orchestrator models ------------------------------------------
+
+
+class ContainerSpawnRequest(BaseModel):
+    """Request body for spawning a container."""
+
+    image: str
+    tenant_id: str
+    node_id: str
+    journey_id: str | None = None
+    memory_limit_mb: int = 128
+    cpu_period: int = 100000
+    cpu_quota: int = 50000
+    env: dict[str, str] = Field(default_factory=dict)
+    timeout_seconds: int = 30
+
+
+class ContainerSpawnResponse(BaseModel):
+    """Response body after spawning a container."""
+
+    container_id: str
+    node_id: str
+    tenant_id: str
+    image: str
+    status: str
+    started_at: str | None = None
+
+
+class ContainerStatusResponse(BaseModel):
+    """Response body for container status/metrics."""
+
+    container_id: str
+    status: str
+    memory_mb: float = 0.0
+    cpu_percent: float = 0.0
+    started_at: str | None = None
+    finished_at: str | None = None
+    exit_code: int | None = None
+    logs: str = ""
+
+
+class ContainerExecRequest(BaseModel):
+    """Request body for executing a command in a container."""
+
+    cmd: str
+
+
+class ContainerExecResponse(BaseModel):
+    """Response body for container exec results."""
+
+    container_id: str
+    exit_code: int
+    stdout: str = ""
+    stderr: str = ""
+    duration_ms: float = 0.0
+
+
+class ContainerListResponse(BaseModel):
+    """Response body listing containers."""
+
+    containers: list[ContainerSpawnResponse] = Field(default_factory=list)
+
+
 # ---------------------------------------------------------------------------
 # Service layer (lazy init, graceful fallback)
 # ---------------------------------------------------------------------------
@@ -255,6 +326,7 @@ class KpiRecommendResponse(BaseModel):
 @dataclass
 class _Services:
     """Lazy-initialized backend services."""
+
     _interface: Any = None
     _telemetry_hub: Any = None
     _graph: Any = None
@@ -263,6 +335,7 @@ class _Services:
     _cost_quality_analyzer: Any = None
     _metrics_timeseries: Any = None
     _kpi_provider: Any = None
+    _container_orch: Any = None
     _initialized: bool = False
 
     def ensure_initialized(self) -> None:
@@ -273,6 +346,7 @@ class _Services:
         # UnifiedInterface
         try:
             from .interface import UnifiedInterface
+
             self._interface = UnifiedInterface.get_instance()
             logger.info("Sovereign gateway: UnifiedInterface connected")
         except Exception as exc:
@@ -281,6 +355,7 @@ class _Services:
         # TelemetryHub
         try:
             from ..telemetry.provider import TelemetryHub
+
             self._telemetry_hub = TelemetryHub()
             logger.info("Sovereign gateway: TelemetryHub created")
         except Exception as exc:
@@ -289,6 +364,7 @@ class _Services:
         # GraphManager
         try:
             from ..graph.manager import GraphManager
+
             gm = GraphManager.from_env()
             if gm.verify_connectivity():
                 self._graph = gm
@@ -301,14 +377,19 @@ class _Services:
         # KPI subsystems
         try:
             from ..telemetry.model_benchmark import ModelBenchmark
+
             self._model_benchmark = ModelBenchmark(graph_manager=self._graph)
             from ..telemetry.tool_scorecard import ToolScorecard
+
             self._tool_scorecard = ToolScorecard(graph_manager=self._graph)
             from ..telemetry.cost_quality_analyzer import CostQualityAnalyzer
+
             self._cost_quality_analyzer = CostQualityAnalyzer(graph_manager=self._graph)
             from ..telemetry.metrics_timeseries import MetricsTimeSeries
+
             self._metrics_timeseries = MetricsTimeSeries(graph_manager=self._graph)
             from ..telemetry.kpi_provider import KpiProvider
+
             self._kpi_provider = KpiProvider()
             logger.info("Sovereign gateway: KPI subsystems initialized")
         except Exception as exc:
@@ -353,6 +434,19 @@ class _Services:
     def kpi_provider(self):
         self.ensure_initialized()
         return self._kpi_provider
+
+    @property
+    def container_orch(self):
+        """Lazy ContainerOrchestrator — only created on first access."""
+        if self._container_orch is None:
+            try:
+                from ..containers.orchestrator import ContainerOrchestrator
+
+                self._container_orch = ContainerOrchestrator()
+                logger.info("ContainerOrchestrator initialized")
+            except Exception as exc:
+                logger.warning("ContainerOrchestrator unavailable: %s", exc)
+        return self._container_orch
 
 
 _svc = _Services()
@@ -430,7 +524,11 @@ async def _telemetry_loop() -> None:
                 if events:
                     payload = [
                         {
-                            "event_type": e.event_type.value if hasattr(e.event_type, "value") else str(e.event_type),
+                            "event_type": (
+                                e.event_type.value
+                                if hasattr(e.event_type, "value")
+                                else str(e.event_type)
+                            ),
                             "source": e.source,
                             "message": e.message,
                             "timestamp": e.timestamp,
@@ -453,6 +551,7 @@ router = APIRouter(prefix="/api/v1", tags=["sovereign"])
 
 # -- Agents ------------------------------------------------------------------
 
+
 @router.get("/agents", response_model=list[AgentStatus])
 async def list_agents():
     """List all 19 agents with status and performance metrics."""
@@ -463,9 +562,15 @@ async def list_agents():
         # Graph has no Agent nodes yet — fall back to static registry
         try:
             from ..orchestrator.agent_selector import AGENT_REGISTRY
+
             rows = [
-                {"id": aid, "name": info["name"], "type": info["type"],
-                 "status": "active", "success_rate": None}
+                {
+                    "id": aid,
+                    "name": info["name"],
+                    "type": info["type"],
+                    "status": "active",
+                    "success_rate": None,
+                }
                 for aid, info in AGENT_REGISTRY.items()
             ]
         except ImportError:
@@ -479,7 +584,6 @@ async def agent_history(agent_id: str, limit: int = Query(default=20, le=100)):
     if not _svc.graph:
         return []
     try:
-        from ..graph import queries as q
         rows = _svc.graph.execute_read(
             "MATCH (t:Task)-[:ASSIGNED_TO]->(a:Agent {id: $agent_id}) "
             "RETURN t ORDER BY t.created_at DESC LIMIT $limit",
@@ -498,6 +602,7 @@ async def create_agent(body: AgentCreateRequest):
         return {"error": "Graph database not available"}
     try:
         from ..graph import queries as q
+
         params = {
             "id": body.id,
             "name": body.name,
@@ -506,11 +611,13 @@ async def create_agent(body: AgentCreateRequest):
             "capabilities": body.capabilities,
             "status": body.status,
         }
-        rows = _svc.graph.execute_write(q.UPSERT_AGENT, params)
-        node = rows[0]["a"] if rows else params
+        _svc.graph.execute_write(q.UPSERT_AGENT, params)
         return AgentStatus(
-            id=body.id, name=body.name, type=body.type,
-            status=body.status, success_rate=None,
+            id=body.id,
+            name=body.name,
+            type=body.type,
+            status=body.status,
+            success_rate=None,
         )
     except Exception as exc:
         logger.error("create_agent error: %s", exc)
@@ -566,8 +673,7 @@ async def delete_agent(agent_id: str):
         return {"error": "Graph database not available"}
     try:
         rows = _svc.graph.execute_write(
-            "MATCH (a:Agent {id: $agent_id}) "
-            "SET a.status = 'inactive' RETURN a",
+            "MATCH (a:Agent {id: $agent_id}) " "SET a.status = 'inactive' RETURN a",
             {"agent_id": agent_id},
         )
         if not rows:
@@ -580,6 +686,7 @@ async def delete_agent(agent_id: str):
 
 # -- Tasks -------------------------------------------------------------------
 
+
 @router.post("/tasks")
 async def submit_task(body: TaskSubmission):
     """Submit a task to the Neural Link orchestrator."""
@@ -589,11 +696,14 @@ async def submit_task(body: TaskSubmission):
 
     # Broadcast flow event if we have subscribers
     if _ws_manager.channel_count("flow-events") > 0:
-        await _ws_manager.broadcast("flow-events", {
-            "type": "task_submitted",
-            "query": body.query,
-            "result_preview": result.get("answer", "")[:200],
-        })
+        await _ws_manager.broadcast(
+            "flow-events",
+            {
+                "type": "task_submitted",
+                "query": body.query,
+                "result_preview": result.get("answer", "")[:200],
+            },
+        )
 
     return result
 
@@ -605,6 +715,7 @@ async def recent_tasks(limit: int = Query(default=20, le=100)):
         return []
     try:
         from ..graph import queries as q
+
         return _svc.graph.execute_read(q.GET_RECENT_TASKS, {"limit": limit})
     except Exception as exc:
         logger.warning("recent_tasks error: %s", exc)
@@ -612,6 +723,7 @@ async def recent_tasks(limit: int = Query(default=20, le=100)):
 
 
 # -- RAG ---------------------------------------------------------------------
+
 
 @router.get("/rag/search")
 async def rag_search(q: str = Query(..., min_length=1), top_k: int = Query(default=10, le=50)):
@@ -622,6 +734,7 @@ async def rag_search(q: str = Query(..., min_length=1), top_k: int = Query(defau
 
 
 # -- Graph -------------------------------------------------------------------
+
 
 @router.get("/graph/explore", response_model=GraphSubset)
 async def graph_explore(
@@ -646,20 +759,26 @@ async def graph_explore(
         row = rows[0]
         nodes = []
         for n in row.get("ns", []):
-            nodes.append(GraphNode(
-                id=n.get("id", str(n.get("elementId", ""))),
-                labels=list(n.get("labels", n.get("_labels", []))),
-                properties={k: v for k, v in n.items() if k not in ("labels", "_labels", "elementId")},
-            ))
+            nodes.append(
+                GraphNode(
+                    id=n.get("id", str(n.get("elementId", ""))),
+                    labels=list(n.get("labels", n.get("_labels", []))),
+                    properties={
+                        k: v for k, v in n.items() if k not in ("labels", "_labels", "elementId")
+                    },
+                )
+            )
 
         edges = []
         for r in row.get("rs", []):
-            edges.append(GraphEdge(
-                source=str(r.get("startNodeElementId", "")),
-                target=str(r.get("endNodeElementId", "")),
-                type=r.get("type", ""),
-                properties=dict(r) if isinstance(r, dict) else {},
-            ))
+            edges.append(
+                GraphEdge(
+                    source=str(r.get("startNodeElementId", "")),
+                    target=str(r.get("endNodeElementId", "")),
+                    type=r.get("type", ""),
+                    properties=dict(r) if isinstance(r, dict) else {},
+                )
+            )
 
         return GraphSubset(nodes=nodes, edges=edges)
     except Exception as exc:
@@ -674,6 +793,7 @@ async def graph_services():
         return []
     try:
         from ..graph import queries as q
+
         rows = _svc.graph.execute_read(q.GET_ALL_SERVICES)
         services = []
         for row in rows:
@@ -681,12 +801,20 @@ async def graph_services():
             neighbors_rows = _svc.graph.execute_read(
                 q.GET_SERVICE_NEIGHBORS, {"service_name": name}
             )
-            neighbor_names = sorted({r.get("connected_service", "") for r in neighbors_rows if r.get("connected_service")})
-            services.append(ServiceInfo(
-                service=name,
-                node_count=row.get("node_count", 0),
-                neighbors=neighbor_names,
-            ))
+            neighbor_names = sorted(
+                {
+                    r.get("connected_service", "")
+                    for r in neighbors_rows
+                    if r.get("connected_service")
+                }
+            )
+            services.append(
+                ServiceInfo(
+                    service=name,
+                    node_count=row.get("node_count", 0),
+                    neighbors=neighbor_names,
+                )
+            )
         return services
     except Exception as exc:
         logger.warning("graph_services error: %s", exc)
@@ -695,15 +823,18 @@ async def graph_services():
 
 # -- Cluster -----------------------------------------------------------------
 
+
 @router.get("/cluster/health", response_model=ClusterHealth)
 async def cluster_health():
     """Cluster health check (ChromaDB, Neo4j, Evidence, n8n, Tailscale)."""
     try:
         import sys
         from pathlib import Path
+
         tools_dir = Path(__file__).resolve().parent.parent.parent.parent / "tools"
         sys.path.insert(0, str(tools_dir.parent))
         from tools.cluster_health import collect_cluster_health
+
         result = collect_cluster_health()
         return ClusterHealth(**result)
     except Exception as exc:
@@ -725,8 +856,7 @@ _jitbit_state: dict[str, Any] = {
 }
 
 
-def _jitbit_log_path() -> "Path":
-    from pathlib import Path
+def _jitbit_log_path() -> Path:
     root = Path(__file__).resolve().parent.parent.parent.parent
     return root / "logs" / "mission_zero.log"
 
@@ -783,11 +913,14 @@ async def jitbit_error(body: JitbitErrorBody):
     logger.info("Jitbit error received: %s @ %s (line %s)", body.step, body.error, body.line)
 
     # Broadcast para JourneyCanvas
-    await _ws_manager.broadcast("journey-events", {
-        "type": "jitbit_error",
-        "payload": _jitbit_state["last_error"],
-        "timestamp": _jitbit_state["last_activity"],
-    })
+    await _ws_manager.broadcast(
+        "journey-events",
+        {
+            "type": "jitbit_error",
+            "payload": _jitbit_state["last_error"],
+            "timestamp": _jitbit_state["last_activity"],
+        },
+    )
 
     return {"ok": True}
 
@@ -822,11 +955,14 @@ async def jitbit_heal():
         _jitbit_state["last_activity"] = time.strftime("%Y-%m-%dT%H:%M:%S")  # noqa: DTZ005
 
         # Broadcast para JourneyCanvas
-        await _ws_manager.broadcast("journey-events", {
-            "type": "heal_completed",
-            "payload": {"status": "active"},
-            "timestamp": _jitbit_state["last_activity"],
-        })
+        await _ws_manager.broadcast(
+            "journey-events",
+            {
+                "type": "heal_completed",
+                "payload": {"status": "active"},
+                "timestamp": _jitbit_state["last_activity"],
+            },
+        )
 
         return {"ok": True, "message": "Sanitização concluída."}
     except subprocess.TimeoutExpired:
@@ -837,6 +973,7 @@ async def jitbit_heal():
 
 
 # -- Flows -------------------------------------------------------------------
+
 
 @router.post("/flows/compose", response_model=FlowComposeResult)
 async def compose_flow(body: FlowComposeRequest):
@@ -851,11 +988,14 @@ async def compose_flow(body: FlowComposeRequest):
     )
 
     if _ws_manager.channel_count("flow-events") > 0:
-        await _ws_manager.broadcast("flow-events", {
-            "type": "flow_composed",
-            "objective": body.objective,
-            "status": result.status,
-        })
+        await _ws_manager.broadcast(
+            "flow-events",
+            {
+                "type": "flow_composed",
+                "objective": body.objective,
+                "status": result.status,
+            },
+        )
 
     return result
 
@@ -867,6 +1007,7 @@ async def deploy_flow(body: FlowDeployRequest):
     Usado pelo bot Telegram ao clicar em 'Deploy no n8n'.
     """
     import os
+
     import httpx
 
     workflow = body.workflow
@@ -910,17 +1051,29 @@ async def deploy_flow(body: FlowDeployRequest):
             if crm_flow_id and _svc.graph:
                 try:
                     from ..graph import queries as q
-                    _svc.graph.execute_write(q.UPDATE_FLOW_STATUS, {
-                        "flow_id": crm_flow_id,
-                        "status": "active",
-                    })
-                    _broadcast_crm_event("flow_status_changed", {
-                        "id": crm_flow_id, "status": "active",
-                    })
+
+                    _svc.graph.execute_write(
+                        q.UPDATE_FLOW_STATUS,
+                        {
+                            "flow_id": crm_flow_id,
+                            "status": "active",
+                        },
+                    )
+                    _broadcast_crm_event(
+                        "flow_status_changed",
+                        {
+                            "id": crm_flow_id,
+                            "status": "active",
+                        },
+                    )
                 except Exception:
                     pass
-            return FlowDeployResult(success=True, message=f"Workflow importado e ativado", workflow_id=wf_id)
-        return FlowDeployResult(success=False, message=f"n8n retornou {r.status_code}: {r.text[:150]}")
+            return FlowDeployResult(
+                success=True, message="Workflow importado e ativado", workflow_id=wf_id
+            )
+        return FlowDeployResult(
+            success=False, message=f"n8n retornou {r.status_code}: {r.text[:150]}"
+        )
     except Exception as exc:
         logger.exception("Deploy n8n falhou: %s", exc)
         return FlowDeployResult(success=False, message=str(exc))
@@ -928,10 +1081,16 @@ async def deploy_flow(body: FlowDeployRequest):
 
 # -- CRM helpers --------------------------------------------------------------
 
+
 def _broadcast_crm_event(event_type: str, payload: dict) -> None:
     """Schedule a CRM event broadcast (fire-and-forget)."""
     import time as _time
-    event = {"type": event_type, "payload": payload, "timestamp": _time.strftime("%Y-%m-%dT%H:%M:%S")}
+
+    event = {
+        "type": event_type,
+        "payload": payload,
+        "timestamp": _time.strftime("%Y-%m-%dT%H:%M:%S"),
+    }
     asyncio.ensure_future(_ws_manager.broadcast("crm-events", event))
 
 
@@ -943,20 +1102,20 @@ def _recency_decay(timestamp_str: str | None) -> float:
     if not timestamp_str:
         return 0.0
     try:
-        from datetime import datetime
         import math
-        
+        from datetime import datetime
+
         # Parse timestamp
-        ts = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        ts = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
         now = datetime.now(ts.tzinfo) if ts.tzinfo else datetime.now()
-        
+
         # Calculate days since last interaction
         days_ago = (now - ts).total_seconds() / 86400
-        
+
         # Exponential decay with 30-day halflife
         halflife = 30.0
         decay_factor = math.exp(-0.693147 * days_ago / halflife)
-        
+
         return max(0.0, min(1.0, decay_factor))
     except Exception:
         return 0.0
@@ -971,30 +1130,33 @@ def _recalculate_trust(lead_id: str, graph) -> float:
     """
     try:
         from ..graph import queries as q
-        
+
         # Get scoring data
         data = graph.execute_read(q.CALCULATE_LEAD_SCORE, {"id": lead_id})
         if not data:
             return 0.0
-        
+
         row = data[0]
-        
+
         # Calculate component scores
         interaction_score = min(row["interaction_count"] / 20.0, 1.0)
         recency_score = _recency_decay(row["last_interaction"])
         flow_score = min(row["flow_count"] / 5.0, 1.0)
-        
+
         # Weighted average
         trust = (interaction_score * 0.4) + (recency_score * 0.3) + (flow_score * 0.3)
-        
+
         # Update lead trust in graph
         now = time.strftime("%Y-%m-%dT%H:%M:%S")
-        graph.execute_write(q.UPDATE_LEAD_TRUST, {
-            "lead_id": lead_id,
-            "trust": trust,
-            "updated_at": now,
-        })
-        
+        graph.execute_write(
+            q.UPDATE_LEAD_TRUST,
+            {
+                "lead_id": lead_id,
+                "trust": trust,
+                "updated_at": now,
+            },
+        )
+
         return trust
     except Exception as exc:
         logger.warning("_recalculate_trust error: %s", exc)
@@ -1003,6 +1165,7 @@ def _recalculate_trust(lead_id: str, graph) -> float:
 
 # -- CRM endpoints ------------------------------------------------------------
 
+
 @router.get("/crm/leads", response_model=list[CrmLeadResponse])
 async def list_crm_leads(limit: int = Query(default=50, le=200)):
     """List all CRM leads, newest first."""
@@ -1010,6 +1173,7 @@ async def list_crm_leads(limit: int = Query(default=50, le=200)):
         return []
     try:
         from ..graph import queries as q
+
         rows = _svc.graph.execute_read(q.GET_ALL_LEADS, {"limit": limit})
         return [CrmLeadResponse(**r) for r in rows]
     except Exception as exc:
@@ -1018,12 +1182,15 @@ async def list_crm_leads(limit: int = Query(default=50, le=200)):
 
 
 @router.get("/crm/leads/search", response_model=list[CrmLeadResponse])
-async def search_crm_leads(q: str = Query(default="", description="Search term"), limit: int = Query(default=50, le=200)):
+async def search_crm_leads(
+    q: str = Query(default="", description="Search term"), limit: int = Query(default=50, le=200)
+):
     """Fulltext search for leads by name, email, or company."""
     if not _svc.graph or not q:
         return []
     try:
         from ..graph import queries as qry
+
         rows = _svc.graph.execute_read(qry.FULLTEXT_SEARCH_LEADS, {"query": q, "limit": limit})
         # Remove score field from results
         return [CrmLeadResponse(**{k: v for k, v in r.items() if k != "score"}) for r in rows]
@@ -1038,8 +1205,10 @@ async def create_crm_lead(body: CrmLeadCreate):
     if not _svc.graph:
         return CrmLeadResponse(id="", name=body.name)
     try:
-        from ..graph import queries as q
         import uuid
+
+        from ..graph import queries as q
+
         now = time.strftime("%Y-%m-%dT%H:%M:%S")
         lead_id = f"lead_{uuid.uuid4().hex[:12]}"
         params = {
@@ -1068,6 +1237,7 @@ async def get_crm_lead(lead_id: str):
         return CrmLeadResponse(id=lead_id, name="")
     try:
         from ..graph import queries as q
+
         rows = _svc.graph.execute_read(q.GET_LEAD_BY_ID, {"lead_id": lead_id})
         if rows:
             return CrmLeadResponse(**rows[0])
@@ -1084,11 +1254,11 @@ async def update_crm_lead(lead_id: str, body: CrmLeadUpdate):
         return CrmLeadResponse(id=lead_id, name="")
     try:
         from ..graph import queries as q
-        
+
         # Build update params (only include non-None fields)
         params = {"id": lead_id}
         updated_fields = []
-        
+
         if body.name is not None:
             params["name"] = body.name
             updated_fields.append("name")
@@ -1104,21 +1274,24 @@ async def update_crm_lead(lead_id: str, body: CrmLeadUpdate):
         if body.trust is not None:
             params["trust"] = body.trust
             updated_fields.append("trust")
-        
+
         # Execute update
         result = _svc.graph.execute_write(q.UPDATE_LEAD, params)
-        
+
         if result:
-            _broadcast_crm_event("lead_updated", {
-                "lead_id": lead_id,
-                "fields": updated_fields,
-            })
-            
+            _broadcast_crm_event(
+                "lead_updated",
+                {
+                    "lead_id": lead_id,
+                    "fields": updated_fields,
+                },
+            )
+
             # Fetch updated lead
             rows = _svc.graph.execute_read(q.GET_LEAD_BY_ID, {"lead_id": lead_id})
             if rows:
                 return CrmLeadResponse(**rows[0])
-        
+
         return CrmLeadResponse(id=lead_id, name="")
     except Exception as exc:
         logger.warning("update_crm_lead error: %s", exc)
@@ -1132,7 +1305,7 @@ async def delete_crm_lead(lead_id: str):
         return
     try:
         from ..graph import queries as q
-        
+
         _svc.graph.execute_write(q.SOFT_DELETE_LEAD, {"id": lead_id})
         _broadcast_crm_event("lead_deleted", {"lead_id": lead_id})
     except Exception as exc:
@@ -1155,7 +1328,7 @@ async def get_lead_score(lead_id: str):
         )
     try:
         from ..graph import queries as q
-        
+
         # Get scoring data
         data = _svc.graph.execute_read(q.CALCULATE_LEAD_SCORE, {"id": lead_id})
         if not data:
@@ -1169,21 +1342,21 @@ async def get_lead_score(lead_id: str):
                 recency_score=0.0,
                 flow_score=0.0,
             )
-        
+
         row = data[0]
-        
+
         # Calculate component scores
         interaction_count = row["interaction_count"]
         last_interaction = row["last_interaction"]
         flow_count = row["flow_count"]
-        
+
         interaction_score = min(interaction_count / 20.0, 1.0)
         recency_score = _recency_decay(last_interaction)
         flow_score = min(flow_count / 5.0, 1.0)
-        
+
         # Weighted average
         trust = (interaction_score * 0.4) + (recency_score * 0.3) + (flow_score * 0.3)
-        
+
         return CrmLeadScoreResponse(
             lead_id=lead_id,
             trust=trust,
@@ -1215,7 +1388,10 @@ async def get_lead_interactions(lead_id: str, limit: int = Query(default=50, le=
         return []
     try:
         from ..graph import queries as q
-        return _svc.graph.execute_read(q.GET_LEAD_INTERACTIONS, {"lead_id": lead_id, "limit": limit})
+
+        return _svc.graph.execute_read(
+            q.GET_LEAD_INTERACTIONS, {"lead_id": lead_id, "limit": limit}
+        )
     except Exception as exc:
         logger.warning("get_lead_interactions error: %s", exc)
         return []
@@ -1228,6 +1404,7 @@ async def get_crm_graph(limit: int = Query(default=200, le=1000)):
         return CrmGraphResponse()
     try:
         from ..graph import queries as q
+
         rows = _svc.graph.execute_read(q.GET_LEAD_GRAPH, {"limit": limit})
         if not rows:
             return CrmGraphResponse()
@@ -1288,6 +1465,7 @@ async def list_crm_flows(limit: int = Query(default=50, le=200)):
         return []
     try:
         from ..graph import queries as q
+
         rows = _svc.graph.execute_read(q.GET_ALL_FLOWS, {"limit": limit})
         return [CrmFlowResponse(**r) for r in rows]
     except Exception as exc:
@@ -1301,8 +1479,10 @@ async def create_crm_flow(body: CrmFlowCreate):
     if not _svc.graph:
         return CrmFlowResponse(id="", name=body.name)
     try:
-        from ..graph import queries as q
         import uuid
+
+        from ..graph import queries as q
+
         now = time.strftime("%Y-%m-%dT%H:%M:%S")
         flow_id = f"flow_{uuid.uuid4().hex[:12]}"
         params = {
@@ -1314,7 +1494,9 @@ async def create_crm_flow(body: CrmFlowCreate):
             "created_at": now,
         }
         _svc.graph.execute_write(q.UPSERT_FLOW, params)
-        _broadcast_crm_event("flow_status_changed", {"id": flow_id, "name": body.name, "status": "draft"})
+        _broadcast_crm_event(
+            "flow_status_changed", {"id": flow_id, "name": body.name, "status": "draft"}
+        )
         return CrmFlowResponse(**params, lead_count=0)
     except Exception as exc:
         logger.warning("create_crm_flow error: %s", exc)
@@ -1328,6 +1510,7 @@ async def get_crm_flow(flow_id: str):
         return CrmFlowResponse(id=flow_id, name="")
     try:
         from ..graph import queries as q
+
         rows = _svc.graph.execute_read(q.GET_FLOW_BY_ID, {"flow_id": flow_id})
         if rows:
             row = rows[0]
@@ -1346,11 +1529,11 @@ async def update_crm_flow(flow_id: str, body: CrmFlowUpdate):
         return CrmFlowResponse(id=flow_id, name="")
     try:
         from ..graph import queries as q
-        
+
         # Build update params (only include non-None fields)
         params = {"id": flow_id}
         updated_fields = []
-        
+
         if body.name is not None:
             params["name"] = body.name
             updated_fields.append("name")
@@ -1360,23 +1543,26 @@ async def update_crm_flow(flow_id: str, body: CrmFlowUpdate):
         if body.status is not None:
             params["status"] = body.status
             updated_fields.append("status")
-        
+
         # Execute update
         result = _svc.graph.execute_write(q.UPDATE_FLOW, params)
-        
+
         if result:
-            _broadcast_crm_event("flow_updated", {
-                "flow_id": flow_id,
-                "fields": updated_fields,
-            })
-            
+            _broadcast_crm_event(
+                "flow_updated",
+                {
+                    "flow_id": flow_id,
+                    "fields": updated_fields,
+                },
+            )
+
             # Fetch updated flow
             rows = _svc.graph.execute_read(q.GET_FLOW_BY_ID, {"flow_id": flow_id})
             if rows:
                 row = rows[0]
                 lead_ids = row.pop("lead_ids", [])
                 return CrmFlowResponse(**row, lead_count=len(lead_ids) if lead_ids else 0)
-        
+
         return CrmFlowResponse(id=flow_id, name="")
     except Exception as exc:
         logger.warning("update_crm_flow error: %s", exc)
@@ -1390,7 +1576,7 @@ async def delete_crm_flow(flow_id: str):
         return
     try:
         from ..graph import queries as q
-        
+
         _svc.graph.execute_write(q.SOFT_DELETE_FLOW, {"id": flow_id})
         _broadcast_crm_event("flow_deleted", {"flow_id": flow_id})
     except Exception as exc:
@@ -1404,11 +1590,15 @@ async def add_lead_to_flow(flow_id: str, lead_id: str):
         return
     try:
         from ..graph import queries as q
-        _svc.graph.execute_write(q.CREATE_LEAD_PART_OF_FLOW, {
-            "lead_id": lead_id,
-            "flow_id": flow_id,
-            "added_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        })
+
+        _svc.graph.execute_write(
+            q.CREATE_LEAD_PART_OF_FLOW,
+            {
+                "lead_id": lead_id,
+                "flow_id": flow_id,
+                "added_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            },
+        )
     except Exception as exc:
         logger.warning("add_lead_to_flow error: %s", exc)
 
@@ -1419,8 +1609,10 @@ async def record_crm_interaction(body: CrmInteractionCreate):
     if not _svc.graph:
         return {"id": ""}
     try:
-        from ..graph import queries as q
         import uuid
+
+        from ..graph import queries as q
+
         now = time.strftime("%Y-%m-%dT%H:%M:%S")
         interaction_id = f"interaction_{uuid.uuid4().hex[:12]}"
         params = {
@@ -1435,35 +1627,47 @@ async def record_crm_interaction(body: CrmInteractionCreate):
         _svc.graph.execute_write(q.UPSERT_INTERACTION, params)
 
         # Link interaction to lead
-        _svc.graph.execute_write(q.CREATE_INTERACTION_FOR_LEAD, {
-            "interaction_id": interaction_id,
-            "lead_id": body.lead_id,
-        })
+        _svc.graph.execute_write(
+            q.CREATE_INTERACTION_FOR_LEAD,
+            {
+                "interaction_id": interaction_id,
+                "lead_id": body.lead_id,
+            },
+        )
 
         # Link interaction to agent if provided
         if body.agent_id:
             try:
-                _svc.graph.execute_write(q.CREATE_INTERACTION_BY_AGENT, {
-                    "interaction_id": interaction_id,
-                    "agent_id": body.agent_id,
-                })
+                _svc.graph.execute_write(
+                    q.CREATE_INTERACTION_BY_AGENT,
+                    {
+                        "interaction_id": interaction_id,
+                        "agent_id": body.agent_id,
+                    },
+                )
             except Exception:
                 pass  # Agent may not exist in graph yet
 
         # Increment lead interaction count
-        _svc.graph.execute_write(q.INCREMENT_LEAD_INTERACTION_COUNT, {
-            "lead_id": body.lead_id,
-            "updated_at": now,
-        })
+        _svc.graph.execute_write(
+            q.INCREMENT_LEAD_INTERACTION_COUNT,
+            {
+                "lead_id": body.lead_id,
+                "updated_at": now,
+            },
+        )
 
         # Auto-recalculate trust score
         _recalculate_trust(body.lead_id, _svc.graph)
 
-        _broadcast_crm_event("interaction_recorded", {
-            "id": interaction_id,
-            "lead_id": body.lead_id,
-            "action": body.action,
-        })
+        _broadcast_crm_event(
+            "interaction_recorded",
+            {
+                "id": interaction_id,
+                "lead_id": body.lead_id,
+                "action": body.action,
+            },
+        )
         return {"id": interaction_id}
     except Exception as exc:
         logger.warning("record_crm_interaction error: %s", exc)
@@ -1477,6 +1681,7 @@ async def crm_stats():
         return CrmStatsResponse()
     try:
         from ..graph import queries as q
+
         rows = _svc.graph.execute_read(q.GET_CRM_STATS)
         if rows:
             r = rows[0]
@@ -1494,6 +1699,7 @@ async def crm_stats():
 
 # -- Pipeline Stats (fix: missing endpoint frontend expects) ------------------
 
+
 @router.get("/pipeline/stats")
 async def pipeline_stats():
     """CostTracker aggregate statistics. Frontend PipelineStats expects this."""
@@ -1508,6 +1714,7 @@ async def pipeline_stats():
 
 
 # -- KPI Metrics Intelligence ------------------------------------------------
+
 
 @router.get("/kpi/models")
 async def kpi_models():
@@ -1566,6 +1773,7 @@ async def kpi_submit_review(body: KpiToolReviewSubmit):
         return {"error": "Review submission failed"}
     except ValueError as e:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -1578,7 +1786,9 @@ async def kpi_cost_quality():
 
 
 @router.get("/kpi/trends")
-async def kpi_trends(dimension: str = Query(default="model"), limit: int = Query(default=90, le=365)):
+async def kpi_trends(
+    dimension: str = Query(default="model"), limit: int = Query(default=90, le=365)
+):
     """Daily aggregates by dimension (model|agent|task_type)."""
     if not _svc.metrics_timeseries:
         return []
@@ -1592,6 +1802,7 @@ async def kpi_agent_heatmap():
         return []
     try:
         from ..graph import queries as q
+
         return _svc.graph.execute_read(q.GET_AGENT_TASK_TYPE_HEATMAP)
     except Exception as exc:
         logger.warning("kpi_agent_heatmap error: %s", exc)
@@ -1614,13 +1825,16 @@ async def kpi_recommend(
     """Recommend best model for task_type + quality threshold."""
     if not _svc.cost_quality_analyzer:
         return KpiRecommendResponse()
-    result = _svc.cost_quality_analyzer.recommend_model(task_type=task_type, min_quality=min_quality)
+    result = _svc.cost_quality_analyzer.recommend_model(
+        task_type=task_type, min_quality=min_quality
+    )
     if result:
         return KpiRecommendResponse(**result)
     return KpiRecommendResponse(reason="No model meets the quality threshold")
 
 
 # -- UseCase Registry endpoints -----------------------------------------------
+
 
 @router.get("/usecases")
 async def list_usecases(
@@ -1630,6 +1844,7 @@ async def list_usecases(
 ):
     """List use cases with optional domain/status filters."""
     from .usecase_registry import UseCaseRegistry
+
     registry = UseCaseRegistry(_svc.graph)
     if domain:
         return registry.get_by_domain(domain)
@@ -1642,6 +1857,7 @@ async def list_usecases(
 async def usecase_roadmap():
     """Full roadmap view with dependencies and agent assignments."""
     from .usecase_registry import UseCaseRegistry
+
     registry = UseCaseRegistry(_svc.graph)
     return registry.get_roadmap()
 
@@ -1650,6 +1866,7 @@ async def usecase_roadmap():
 async def usecase_coverage():
     """Agent coverage matrix: which agents cover which use cases."""
     from .usecase_registry import UseCaseRegistry
+
     registry = UseCaseRegistry(_svc.graph)
     return registry.get_agent_coverage()
 
@@ -1658,6 +1875,7 @@ async def usecase_coverage():
 async def usecase_skill_gaps():
     """Skills required by use cases but not owned by any agent."""
     from .usecase_registry import UseCaseRegistry
+
     registry = UseCaseRegistry(_svc.graph)
     return registry.get_skill_gaps()
 
@@ -1666,15 +1884,129 @@ async def usecase_skill_gaps():
 async def get_usecase(usecase_id: str):
     """Get single use case with full context (agents, skills, modules, deps)."""
     from .usecase_registry import UseCaseRegistry
+
     registry = UseCaseRegistry(_svc.graph)
     result = registry.get_by_id(usecase_id)
     if not result:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="UseCase not found")
     return result
 
 
+# -- Container Orchestrator endpoints -----------------------------------------
+
+
+@router.post("/containers/spawn", response_model=ContainerSpawnResponse)
+async def spawn_container(body: ContainerSpawnRequest):
+    """Spawn a new sandbox container for a Journey Builder node."""
+    from fastapi import HTTPException
+
+    if not _svc.container_orch:
+        raise HTTPException(status_code=503, detail="ContainerOrchestrator unavailable")
+    try:
+        from ..containers.models import ContainerConfig
+
+        config = ContainerConfig(
+            image=body.image,
+            tenant_id=body.tenant_id,
+            node_id=body.node_id,
+            journey_id=body.journey_id,
+            memory_limit_mb=body.memory_limit_mb,
+            cpu_period=body.cpu_period,
+            cpu_quota=body.cpu_quota,
+            env=body.env,
+            timeout_seconds=body.timeout_seconds,
+        )
+        info = _svc.container_orch.spawn(config)
+        if _ws_manager.channel_count("journey-events") > 0:
+            await _ws_manager.broadcast(
+                "journey-events",
+                {
+                    "type": "container_spawned",
+                    "container_id": info.container_id,
+                    "node_id": info.node_id,
+                    "tenant_id": info.tenant_id,
+                    "image": info.image,
+                },
+            )
+        return ContainerSpawnResponse(**info.model_dump())
+    except Exception as exc:
+        logger.warning("spawn_container error: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/containers/{container_id}/status", response_model=ContainerStatusResponse)
+async def container_status(container_id: str):
+    """Get runtime status, metrics, and logs for a container."""
+    from fastapi import HTTPException
+
+    if not _svc.container_orch:
+        raise HTTPException(status_code=503, detail="ContainerOrchestrator unavailable")
+    try:
+        metrics = _svc.container_orch.get_status(container_id)
+        return ContainerStatusResponse(**metrics.model_dump())
+    except Exception as exc:
+        logger.warning("container_status error: %s", exc)
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/containers", response_model=ContainerListResponse)
+async def list_containers(tenant_id: str = Query(...)):
+    """List all containers for a tenant."""
+    from fastapi import HTTPException
+
+    if not _svc.container_orch:
+        raise HTTPException(status_code=503, detail="ContainerOrchestrator unavailable")
+    try:
+        infos = _svc.container_orch.list_by_tenant(tenant_id)
+        return ContainerListResponse(
+            containers=[ContainerSpawnResponse(**i.model_dump()) for i in infos]
+        )
+    except Exception as exc:
+        logger.warning("list_containers error: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.delete("/containers/{container_id}", status_code=204)
+async def delete_container(container_id: str):
+    """Stop and remove a container."""
+    from fastapi import HTTPException
+
+    if not _svc.container_orch:
+        raise HTTPException(status_code=503, detail="ContainerOrchestrator unavailable")
+    try:
+        _svc.container_orch.stop(container_id)
+        if _ws_manager.channel_count("journey-events") > 0:
+            await _ws_manager.broadcast(
+                "journey-events",
+                {
+                    "type": "container_stopped",
+                    "container_id": container_id,
+                },
+            )
+    except Exception as exc:
+        logger.warning("delete_container error: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/containers/{container_id}/exec", response_model=ContainerExecResponse)
+async def exec_in_container(container_id: str, body: ContainerExecRequest):
+    """Execute a command inside a running container."""
+    from fastapi import HTTPException
+
+    if not _svc.container_orch:
+        raise HTTPException(status_code=503, detail="ContainerOrchestrator unavailable")
+    try:
+        result = _svc.container_orch.exec_in_container(container_id, body.cmd)
+        return ContainerExecResponse(**result.model_dump())
+    except Exception as exc:
+        logger.warning("exec_in_container error: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 # -- WebSocket channels -------------------------------------------------------
+
 
 @router.websocket("/ws/telemetry")
 async def ws_telemetry(ws: WebSocket):
@@ -1754,7 +2086,6 @@ _monitor_handles: dict = {}  # k8s_monitor, pod_monitor para shutdown
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """Start background loops on startup, cancel on shutdown."""
-    import threading
 
     _svc.ensure_initialized()
     _bg_tasks.append(asyncio.create_task(_agent_health_loop()))
@@ -1762,7 +2093,8 @@ async def lifespan(application: FastAPI):
 
     # K8sEventBufferProvider para broadcast de eventos via WebSocket
     try:
-        from ..telemetry.provider import TelemetryHub, K8sEventBufferProvider
+        from ..telemetry.provider import K8sEventBufferProvider
+
         k8s_provider = K8sEventBufferProvider()
         _svc.telemetry_hub.register(k8s_provider)
         logger.info("K8sEventBufferProvider registrado no TelemetryHub")
@@ -1773,6 +2105,7 @@ async def lifespan(application: FastAPI):
     # CrmEventProvider para broadcast de eventos CRM via TelemetryHub
     try:
         from ..telemetry.provider import CrmEventProvider
+
         crm_provider = CrmEventProvider()
         _svc.telemetry_hub.register(crm_provider)
         logger.info("CrmEventProvider registrado no TelemetryHub")
@@ -1790,6 +2123,7 @@ async def lifespan(application: FastAPI):
     # TelegramCommandHandler
     try:
         from ..telemetry.telegram_command_handler import TelegramCommandHandler
+
         tg_handler = TelegramCommandHandler()
         tg_handler.start()
         _monitor_threads.append(("telegram", tg_handler))
@@ -1800,15 +2134,21 @@ async def lifespan(application: FastAPI):
     # K8sEventMonitor + PodStatusMonitor (opcional - requer cluster)
     try:
         from ..k8s_monitoring.wire_monitoring import wire_and_start
+
         k8s_monitor, pod_monitor = wire_and_start()
         _monitor_handles["k8s"] = k8s_monitor
         _monitor_handles["pod"] = pod_monitor
         if k8s_provider:
+
             def _push_failure(event):
                 k8s_provider.push_pod_failure(
-                    event.pod_name, event.namespace, event.reason,
-                    is_neo4j=event.is_neo4j, is_chromadb=event.is_chromadb,
+                    event.pod_name,
+                    event.namespace,
+                    event.reason,
+                    is_neo4j=event.is_neo4j,
+                    is_chromadb=event.is_chromadb,
                 )
+
             pod_monitor.register_handler(_push_failure)
             logger.info("PodStatusMonitor conectado ao WebSocket broadcast")
     except Exception as exc:
@@ -1860,5 +2200,7 @@ app.include_router(router)
 if __name__ == "__main__":
     import uvicorn
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
     uvicorn.run(app, host="0.0.0.0", port=8766)

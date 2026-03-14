@@ -24,9 +24,9 @@ CHECKS_WARNING=0
 check() {
     local name="$1"
     local command="$2"
-    
+
     echo -n "  Verificando $name... "
-    
+
     if eval "$command" > /dev/null 2>&1; then
         echo -e "${GREEN}✓${NC}"
         ((CHECKS_PASSED++))
@@ -42,9 +42,9 @@ check() {
 check_warn() {
     local name="$1"
     local command="$2"
-    
+
     echo -n "  Verificando $name... "
-    
+
     if eval "$command" > /dev/null 2>&1; then
         echo -e "${GREEN}✓${NC}"
         ((CHECKS_PASSED++))

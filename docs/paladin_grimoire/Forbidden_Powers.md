@@ -30,14 +30,14 @@ console.log(reactKeys);
 def get_react_fiber(driver, selector):
     """
     Acessa React Fiber Tree de um elemento.
-    
+
     Args:
         driver: WebDriver instance
         selector: Seletor CSS do elemento React
-        
+
     Returns:
         Dict com state, props e outras informações internas
-        
+
     Example:
         fiber = get_react_fiber(driver, "button.submit")
         print(fiber['memoizedState'])  # State interno
@@ -46,13 +46,13 @@ def get_react_fiber(driver, selector):
     script = """
     const element = document.querySelector(arguments[0]);
     if (!element) return null;
-    
+
     // Encontrar chave do Fiber
     const fiberKey = Object.keys(element).find(k => k.startsWith('__reactFiber$'));
     if (!fiberKey) return null;
-    
+
     const fiber = element[fiberKey];
-    
+
     // Extrair informações relevantes
     return {
         type: fiber.type?.name || fiber.type,
@@ -72,18 +72,18 @@ def get_react_fiber(driver, selector):
 def manipulate_react_state(driver, selector, state_path, new_value):
     """
     Manipula state interno de componente React.
-    
+
     ⚠️ ATENÇÃO: Isso pode quebrar a aplicação!
-    
+
     Args:
         driver: WebDriver instance
         selector: Seletor CSS do elemento React
         state_path: Caminho para o state (ex: "disabled", "value")
         new_value: Novo valor do state
-        
+
     Returns:
         True se bem-sucedido
-        
+
     Example:
         # Habilitar botão desabilitado
         manipulate_react_state(driver, "button.submit", "disabled", False)
@@ -92,27 +92,27 @@ def manipulate_react_state(driver, selector, state_path, new_value):
     const element = document.querySelector(arguments[0]);
     const statePath = arguments[1];
     const newValue = arguments[2];
-    
+
     if (!element) return false;
-    
+
     // Encontrar Fiber
     const fiberKey = Object.keys(element).find(k => k.startsWith('__reactFiber$'));
     if (!fiberKey) return false;
-    
+
     const fiber = element[fiberKey];
-    
+
     // Manipular state
     if (fiber.memoizedState) {
         fiber.memoizedState[statePath] = newValue;
-        
+
         // Forçar re-render
         if (fiber.stateNode && fiber.stateNode.forceUpdate) {
             fiber.stateNode.forceUpdate();
         }
-        
+
         return true;
     }
-    
+
     return false;
     """
     return driver.execute_script(script, selector, state_path, new_value)
@@ -142,14 +142,14 @@ button.click()  # Funciona!
 def extract_react_component_data(driver, selector):
     """
     Extrai todos os dados de um componente React.
-    
+
     Args:
         driver: WebDriver instance
         selector: Seletor CSS do componente
-        
+
     Returns:
         Dict com state, props e context
-        
+
     Example:
         data = extract_react_component_data(driver, "div.user-profile")
         print(data['props']['username'])
@@ -158,19 +158,19 @@ def extract_react_component_data(driver, selector):
     script = """
     const element = document.querySelector(arguments[0]);
     if (!element) return null;
-    
+
     const fiberKey = Object.keys(element).find(k => k.startsWith('__reactFiber$'));
     if (!fiberKey) return null;
-    
+
     const fiber = element[fiberKey];
-    
+
     // Função recursiva para serializar objetos (evitar circular refs)
     function serialize(obj, depth = 0) {
         if (depth > 3) return '[Max Depth]';
         if (obj === null || obj === undefined) return obj;
         if (typeof obj !== 'object') return obj;
         if (Array.isArray(obj)) return obj.map(item => serialize(item, depth + 1));
-        
+
         const result = {};
         for (let key in obj) {
             if (obj.hasOwnProperty(key)) {
@@ -183,7 +183,7 @@ def extract_react_component_data(driver, selector):
         }
         return result;
     }
-    
+
     return {
         props: serialize(fiber.memoizedProps),
         state: serialize(fiber.memoizedState),
@@ -222,15 +222,15 @@ driver.execute_cdp_cmd('Network.enable', {})
 def capture_dom_snapshot(driver):
     """
     Captura snapshot completo do DOM incluindo Shadow DOM.
-    
+
     Retorna árvore inteira com coordenadas de layout em um único dump JSON.
-    
+
     Args:
         driver: WebDriver instance
-        
+
     Returns:
         Dict com snapshot completo do DOM
-        
+
     Example:
         snapshot = capture_dom_snapshot(driver)
         print(snapshot['documents'])  # Todos os documentos
@@ -238,14 +238,14 @@ def capture_dom_snapshot(driver):
     """
     # Habilitar DOM domain
     driver.execute_cdp_cmd('DOM.enable', {})
-    
+
     # Capturar snapshot
     snapshot = driver.execute_cdp_cmd('DOMSnapshot.captureSnapshot', {
         'computedStyles': [],  # Não precisamos de estilos computados
         'includePaintOrder': True,
         'includeDOMRects': True  # Incluir coordenadas de layout
     })
-    
+
     return snapshot
 ```
 
@@ -255,26 +255,26 @@ def capture_dom_snapshot(driver):
 def find_all_shadow_roots(driver):
     """
     Encontra todos os Shadow DOMs na página usando CDP.
-    
+
     Args:
         driver: WebDriver instance
-        
+
     Returns:
         Lista de dicts com informações de Shadow DOMs
-        
+
     Example:
         shadows = find_all_shadow_roots(driver)
         for shadow in shadows:
             print(f"Host: {shadow['host']}, Children: {shadow['children']}")
     """
     snapshot = capture_dom_snapshot(driver)
-    
+
     shadow_roots = []
-    
+
     # Parsear snapshot para encontrar shadow roots
     for doc in snapshot.get('documents', []):
         nodes = doc.get('nodes', {})
-        
+
         for i, node_type in enumerate(nodes.get('nodeType', [])):
             # nodeType 11 = DOCUMENT_FRAGMENT_NODE (shadow root)
             if node_type == 11:
@@ -283,7 +283,7 @@ def find_all_shadow_roots(driver):
                     'host': nodes.get('nodeName', [])[i],
                     'children': nodes.get('childNodeIndexes', [])[i] if i < len(nodes.get('childNodeIndexes', [])) else []
                 })
-    
+
     return shadow_roots
 ```
 
@@ -293,26 +293,26 @@ def find_all_shadow_roots(driver):
 def intercept_network_requests(driver, url_pattern):
     """
     Intercepta requisições de rede que correspondem ao padrão.
-    
+
     Args:
         driver: WebDriver instance
         url_pattern: Padrão de URL para interceptar (regex)
-        
+
     Returns:
         Lista de requisições interceptadas
-        
+
     Example:
         # Interceptar chamadas de API
         requests = intercept_network_requests(driver, "*/api/keys*")
     """
     # Habilitar Network domain
     driver.execute_cdp_cmd('Network.enable', {})
-    
+
     # Configurar interceptação
     driver.execute_cdp_cmd('Network.setRequestInterception', {
         'patterns': [{'urlPattern': url_pattern}]
     })
-    
+
     # Coletar requisições (simplificado - na prática, use event listeners)
     # Aqui você precisaria de um listener assíncrono
     pass
@@ -324,16 +324,16 @@ def intercept_network_requests(driver, url_pattern):
 def stealth_execute_script(driver, script):
     """
     Executa JavaScript sem deixar rastros no console.
-    
+
     Usa Runtime.evaluate do CDP em vez de execute_script do Selenium.
-    
+
     Args:
         driver: WebDriver instance
         script: Código JavaScript a executar
-        
+
     Returns:
         Resultado da execução
-        
+
     Example:
         result = stealth_execute_script(driver, "return document.title")
     """
@@ -342,10 +342,10 @@ def stealth_execute_script(driver, script):
         'returnByValue': True,
         'awaitPromise': True
     })
-    
+
     if result.get('exceptionDetails'):
         raise Exception(f"Script error: {result['exceptionDetails']}")
-    
+
     return result.get('result', {}).get('value')
 ```
 
@@ -355,28 +355,28 @@ def stealth_execute_script(driver, script):
 def get_performance_metrics(driver):
     """
     Obtém métricas de performance da página.
-    
+
     Args:
         driver: WebDriver instance
-        
+
     Returns:
         Dict com métricas de performance
-        
+
     Example:
         metrics = get_performance_metrics(driver)
         print(f"Load time: {metrics['DomContentLoaded']}ms")
     """
     # Habilitar Performance domain
     driver.execute_cdp_cmd('Performance.enable', {})
-    
+
     # Obter métricas
     metrics = driver.execute_cdp_cmd('Performance.getMetrics', {})
-    
+
     # Converter para dict
     metrics_dict = {}
     for metric in metrics.get('metrics', []):
         metrics_dict[metric['name']] = metric['value']
-    
+
     return metrics_dict
 ```
 
@@ -400,10 +400,10 @@ Existem comunidades dedicadas a contornar proteções anti-bot do Google, Cloudf
 def remove_webdriver_flag(driver):
     """
     Remove flag 'navigator.webdriver' que identifica automação.
-    
+
     Args:
         driver: WebDriver instance
-        
+
     Example:
         remove_webdriver_flag(driver)
         # Agora navigator.webdriver === undefined
@@ -424,7 +424,7 @@ def remove_webdriver_flag(driver):
 def spoof_chrome_runtime(driver):
     """
     Adiciona chrome.runtime para parecer extensão legítima.
-    
+
     Args:
         driver: WebDriver instance
     """
@@ -447,7 +447,7 @@ def spoof_chrome_runtime(driver):
 def spoof_permissions(driver):
     """
     Modifica API de permissões para evitar detecção.
-    
+
     Args:
         driver: WebDriver instance
     """
@@ -470,7 +470,7 @@ def spoof_permissions(driver):
 def spoof_plugins(driver):
     """
     Adiciona plugins falsos para parecer navegador real.
-    
+
     Args:
         driver: WebDriver instance
     """
@@ -505,10 +505,10 @@ def spoof_plugins(driver):
 def enable_stealth_mode(driver):
     """
     Habilita modo stealth completo com todos os bypasses.
-    
+
     Args:
         driver: WebDriver instance
-        
+
     Example:
         driver = webdriver.Chrome()
         enable_stealth_mode(driver)
@@ -518,17 +518,17 @@ def enable_stealth_mode(driver):
     spoof_chrome_runtime(driver)
     spoof_permissions(driver)
     spoof_plugins(driver)
-    
+
     # User agent realista
     driver.execute_cdp_cmd('Network.setUserAgentOverride', {
         'userAgent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     })
-    
+
     # Timezone
     driver.execute_cdp_cmd('Emulation.setTimezoneOverride', {
         'timezoneId': 'America/New_York'
     })
-    
+
     # Locale
     driver.execute_cdp_cmd('Emulation.setLocaleOverride', {
         'locale': 'en-US'
@@ -556,13 +556,13 @@ Frameworks como React e Angular mudam classes CSS constantemente, mas mantêm a 
 def get_full_accessibility_tree(driver):
     """
     Obtém Accessibility Tree completa da página.
-    
+
     Args:
         driver: WebDriver instance
-        
+
     Returns:
         Dict com árvore de acessibilidade completa
-        
+
     Example:
         ax_tree = get_full_accessibility_tree(driver)
         for node in ax_tree['nodes']:
@@ -570,10 +570,10 @@ def get_full_accessibility_tree(driver):
     """
     # Habilitar Accessibility domain
     driver.execute_cdp_cmd('Accessibility.enable', {})
-    
+
     # Obter árvore completa
     ax_tree = driver.execute_cdp_cmd('Accessibility.getFullAXTree', {})
-    
+
     return ax_tree
 ```
 
@@ -583,40 +583,40 @@ def get_full_accessibility_tree(driver):
 def find_by_ax_tree(driver, role, name=None, description=None):
     """
     Busca elemento por role, name e description na AXTree.
-    
+
     Args:
         driver: WebDriver instance
         role: Role ARIA (ex: 'button', 'link')
         name: Nome acessível (opcional)
         description: Descrição acessível (opcional)
-        
+
     Returns:
         WebElement ou None
-        
+
     Example:
         # Encontrar botão "Submit" mesmo com classe dinâmica
         button = find_by_ax_tree(driver, 'button', name='Submit')
     """
     ax_tree = get_full_accessibility_tree(driver)
-    
+
     for node in ax_tree.get('nodes', []):
         # Verificar role
         node_role = node.get('role', {}).get('value')
         if node_role != role:
             continue
-        
+
         # Verificar name
         if name is not None:
             node_name = node.get('name', {}).get('value', '')
             if name.lower() not in node_name.lower():
                 continue
-        
+
         # Verificar description
         if description is not None:
             node_desc = node.get('description', {}).get('value', '')
             if description.lower() not in node_desc.lower():
                 continue
-        
+
         # Encontrou! Resolver para WebElement
         backend_node_id = node.get('backendDOMNodeId')
         if backend_node_id:
@@ -625,11 +625,11 @@ def find_by_ax_tree(driver, role, name=None, description=None):
                 result = driver.execute_cdp_cmd('DOM.resolveNode', {
                     'backendNodeId': backend_node_id
                 })
-                
+
                 # Obter elemento
                 remote_object = result.get('object', {})
                 object_id = remote_object.get('objectId')
-                
+
                 if object_id:
                     # Executar script para retornar elemento
                     element = driver.execute_script(
@@ -639,7 +639,7 @@ def find_by_ax_tree(driver, role, name=None, description=None):
                     return element
             except:
                 continue
-    
+
     return None
 ```
 
@@ -649,30 +649,30 @@ def find_by_ax_tree(driver, role, name=None, description=None):
 def list_interactive_elements(driver):
     """
     Lista todos os elementos interativos da página via AXTree.
-    
+
     Args:
         driver: WebDriver instance
-        
+
     Returns:
         Lista de dicts com role, name e description
-        
+
     Example:
         elements = list_interactive_elements(driver)
         for elem in elements:
             print(f"{elem['role']}: {elem['name']}")
     """
     ax_tree = get_full_accessibility_tree(driver)
-    
+
     interactive_roles = [
         'button', 'link', 'textbox', 'checkbox', 'radio',
         'combobox', 'listbox', 'menuitem', 'tab', 'switch'
     ]
-    
+
     elements = []
-    
+
     for node in ax_tree.get('nodes', []):
         role = node.get('role', {}).get('value')
-        
+
         if role in interactive_roles:
             elements.append({
                 'role': role,
@@ -681,7 +681,7 @@ def list_interactive_elements(driver):
                 'focused': node.get('focused', False),
                 'disabled': node.get('disabled', False)
             })
-    
+
     return elements
 ```
 
@@ -695,38 +695,38 @@ def list_interactive_elements(driver):
 class ForbiddenPowers:
     """
     Wrapper para poderes proibidos do Paladino.
-    
+
     Centraliza técnicas avançadas de automação.
     """
-    
+
     def __init__(self, driver):
         self.driver = driver
         self._enable_stealth()
-    
+
     def _enable_stealth(self):
         """Habilita modo stealth automaticamente."""
         enable_stealth_mode(self.driver)
-    
+
     def react_fiber(self, selector):
         """Acessa React Fiber Tree."""
         return get_react_fiber(self.driver, selector)
-    
+
     def manipulate_react(self, selector, state_path, value):
         """Manipula state interno do React."""
         return manipulate_react_state(self.driver, selector, state_path, value)
-    
+
     def dom_snapshot(self):
         """Captura snapshot completo do DOM."""
         return capture_dom_snapshot(self.driver)
-    
+
     def ax_tree(self):
         """Obtém Accessibility Tree completa."""
         return get_full_accessibility_tree(self.driver)
-    
+
     def find_by_role(self, role, name=None):
         """Busca elemento por role de acessibilidade."""
         return find_by_ax_tree(self.driver, role, name)
-    
+
     def stealth_eval(self, script):
         """Executa script sem rastros."""
         return stealth_execute_script(self.driver, script)

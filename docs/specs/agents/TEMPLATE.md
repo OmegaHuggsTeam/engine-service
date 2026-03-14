@@ -288,5 +288,5 @@ print(f"Confidence: {result['confidence']}")
 
 ---
 
-**Mantido por**: [Nome do time/pessoa]  
+**Mantido por**: [Nome do time/pessoa]
 **Última Revisão**: YYYY-MM-DD

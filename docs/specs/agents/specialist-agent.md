@@ -205,7 +205,7 @@ TELEGRAM_API_NAME=<seu-nome-aqui>
 ## 🔗 Contexto de Memória (Obsidian/Neo4j)
 
 ### Nodes Relacionados
-- **Concepts**: 
+- **Concepts**:
   - Knowledge Retrieval
   - Prompt Engineering
   - Kubernetes Troubleshooting
@@ -214,7 +214,7 @@ TELEGRAM_API_NAME=<seu-nome-aqui>
   - TF-IDF Ranking
   - Creative Synthesis
 
-- **Skills**: 
+- **Skills**:
   - KnowledgeRetrieval
   - PromptEngineering
   - LLMInvocation
@@ -223,7 +223,7 @@ TELEGRAM_API_NAME=<seu-nome-aqui>
   - CreativeSynthesis
   - ExpressionExtraction
 
-- **Tasks**: 
+- **Tasks**:
   - Query answering with context injection
   - Pod log analysis and troubleshooting
   - Workflow download and adaptation
@@ -247,7 +247,7 @@ ORDER BY c.confidence DESC
 
 // Buscar skills do agente
 MATCH (a:Agent {name: "SpecialistAgent"})-[:OWNS]->(s:Skill)
-RETURN s.name, s.success_count, s.failure_count, 
+RETURN s.name, s.success_count, s.failure_count,
        (s.success_count * 1.0 / (s.success_count + s.failure_count)) as success_rate
 ORDER BY success_rate DESC
 
@@ -539,7 +539,7 @@ print(explanation)
 ### Problema Comum 1: Chunks não encontrados
 - **Sintoma**: `load_knowledge()` retorna lista vazia
 - **Causa**: ChromaDB indisponível e arquivos JSON não existem em `data/chunks/`
-- **Solução**: 
+- **Solução**:
   1. Verificar se ChromaDB está rodando: `docker ps | grep chroma`
   2. Verificar se arquivos JSON existem: `ls data/chunks/*.json`
   3. Rodar pipeline de chunking: `python scripts/mass_ingestion.py`
@@ -606,5 +606,5 @@ print(explanation)
 
 ---
 
-**Mantido por**: Neural Link Team  
+**Mantido por**: Neural Link Team
 **Última Revisão**: 2026-03-03

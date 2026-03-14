@@ -62,19 +62,19 @@ selum = SelumOfPersistence(driver)
 
 try:
     driver.get("https://example.com")
-    
+
     # Limpar obstáculos
     selum.cleansing_aura()
-    
+
     # Buscar e clicar
     btn = selum.scout([{"text": "More information"}])
     if btn:
         selum.strike(btn)
-    
+
     # Ver relatório
     report = selum.get_battle_report()
     print(f"Turnos: {len(report)}")
-    
+
 finally:
     driver.quit()
 ```

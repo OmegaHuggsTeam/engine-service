@@ -12,7 +12,6 @@ Uso:
 """
 
 import argparse
-import json
 import logging
 import sys
 from pathlib import Path
@@ -23,8 +22,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.extractors.github_ingestor import ingest_repository
 from src.processors.n8n_knowledge import (
     generate_capabilities_md,
-    generate_recipes_md,
     generate_master_context,
+    generate_recipes_md,
 )
 from src.utils.vector_db import get_collection_stats
 
@@ -84,7 +83,7 @@ def main():
     # Step 1: GitHub Ingestion
     print("📥 STEP 1: Ingestão do GitHub...")
     print("-" * 80)
-    
+
     stats = ingest_repository(
         ZIE619_REPO,
         branch=args.branch,
@@ -95,31 +94,28 @@ def main():
     print(f"✅ Arquivos JSON encontrados: {stats['total_files']}")
     print(f"✅ Workflows n8n processados: {stats['workflows_processed']}")
     print(f"✅ Chunks salvos no ChromaDB: {stats['chunks_saved']}")
-    
+
     if stats["errors"]:
         print(f"⚠️  Erros encontrados: {len(stats['errors'])}")
         for err in stats["errors"][:5]:  # Show first 5 errors
             print(f"   - {err.get('path', 'unknown')}: {err.get('error', 'unknown error')}")
-    
+
     print()
 
     # Step 2: Load modules from ChromaDB for knowledge generation
     print("📚 STEP 2: Carregando módulos do ChromaDB...")
     print("-" * 80)
-    
+
     try:
         from src.utils.vector_db import get_all_chunks
-        
+
         all_chunks = get_all_chunks()
-        external_modules = [
-            c for c in all_chunks 
-            if c.get("category") == "external_template"
-        ]
-        
+        external_modules = [c for c in all_chunks if c.get("category") == "external_template"]
+
         print(f"✅ Total de chunks no ChromaDB: {len(all_chunks)}")
         print(f"✅ Módulos external_template: {len(external_modules)}")
         print()
-        
+
     except Exception as e:
         logger.error(f"Falha ao carregar chunks do ChromaDB: {e}")
         print(f"❌ Erro ao carregar chunks: {e}")
@@ -131,21 +127,21 @@ def main():
     if external_modules:
         print("🧬 STEP 3: Gerando arquivos de conhecimento...")
         print("-" * 80)
-        
+
         try:
             # Generate n8n_capabilities.md
             cap_path = generate_capabilities_md(external_modules, vault_path=args.vault)
             print(f"✅ Gerado: {cap_path}")
-            
+
             # Generate n8n_recipes.md
             recipes_path = generate_recipes_md(external_modules, vault_path=args.vault)
             print(f"✅ Gerado: {recipes_path}")
-            
+
             # Generate n8n_master_context.json
             context_path = generate_master_context(external_modules, output_dir=args.output)
             print(f"✅ Gerado: {context_path}")
             print()
-            
+
         except Exception as e:
             logger.error(f"Falha ao gerar arquivos de conhecimento: {e}")
             print(f"❌ Erro na geração de conhecimento: {e}")
@@ -157,7 +153,7 @@ def main():
     # Step 4: Final Statistics
     print("📊 STEP 4: Estatísticas Finais")
     print("=" * 80)
-    
+
     if not args.no_chromadb:
         try:
             collection_stats = get_collection_stats()
@@ -166,7 +162,7 @@ def main():
             print()
         except Exception as e:
             logger.warning(f"Não foi possível obter stats do ChromaDB: {e}")
-    
+
     print("🎯 INGESTÃO COMPLETA!")
     print()
     print("Próximos passos:")

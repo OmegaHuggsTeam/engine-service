@@ -7,26 +7,29 @@ Define hierarquia de exceções para tratamento de erros específicos.
 
 class SteadyGazeError(Exception):
     """Erro base do Steady Gaze."""
+
     pass
 
 
 class CDPConnectionError(SteadyGazeError):
     """Erro de conexão CDP."""
+
     pass
 
 
 class AnalysisTimeoutError(SteadyGazeError):
     """Timeout durante análise."""
+
     pass
 
 
 class DimensionAnalysisError(SteadyGazeError):
     """Erro em dimensão específica."""
-    
+
     def __init__(self, dimension: str, original_error: Exception):
         """
         Inicializa erro de dimensão.
-        
+
         Args:
             dimension: Nome da dimensão que falhou
             original_error: Exceção original
@@ -38,4 +41,5 @@ class DimensionAnalysisError(SteadyGazeError):
 
 class PageNotLoadedError(SteadyGazeError):
     """Página não carregada."""
+
     pass

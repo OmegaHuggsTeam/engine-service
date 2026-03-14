@@ -23,12 +23,12 @@ Use JavaScript para acessar `element.shadowRoot` e navegar dentro dele:
 def pierce_shadow_dom(driver, host_selector, inner_selector):
     """
     Penetra Shadow DOM e retorna elemento interno.
-    
+
     Args:
         driver: WebDriver instance
         host_selector: Seletor do elemento host (que contém shadowRoot)
         inner_selector: Seletor do elemento dentro do shadowRoot
-        
+
     Returns:
         WebElement dentro do Shadow DOM
     """
@@ -68,14 +68,14 @@ Para Shadow DOM aninhado, use navegação recursiva:
 def pierce_nested_shadow_dom(driver, path):
     """
     Navega por múltiplos níveis de Shadow DOM.
-    
+
     Args:
         driver: WebDriver instance
         path: Lista de tuplas (host_selector, inner_selector)
-        
+
     Returns:
         WebElement no nível mais profundo
-        
+
     Example:
         path = [
             ("custom-app", "custom-dialog"),
@@ -85,13 +85,13 @@ def pierce_nested_shadow_dom(driver, path):
     script = """
     let current = document;
     const path = arguments[0];
-    
+
     for (let i = 0; i < path.length; i++) {
         const [hostSelector, innerSelector] = path[i];
         const host = current.querySelector(hostSelector);
-        
+
         if (!host) return null;
-        
+
         if (i < path.length - 1) {
             // Não é o último nível, entrar no shadowRoot
             if (!host.shadowRoot) return null;
@@ -118,26 +118,26 @@ Em vez de clicar em botões dentro de Shadow DOM, extraia o link de navegação 
 def extract_navigation_link(driver, host_selector):
     """
     Extrai link de navegação de dentro de Shadow DOM.
-    
+
     Args:
         driver: WebDriver instance
         host_selector: Seletor do componente host
-        
+
     Returns:
         URL de navegação ou None
     """
     script = """
     const host = document.querySelector(arguments[0]);
     if (!host || !host.shadowRoot) return null;
-    
+
     // Procurar por links ou botões com href/data-href
     const link = host.shadowRoot.querySelector('a[href], button[data-href]');
     if (!link) return null;
-    
+
     return link.href || link.getAttribute('data-href');
     """
     url = driver.execute_script(script, host_selector)
-    
+
     if url:
         driver.get(url)  # Navegar diretamente
         return url
@@ -162,38 +162,38 @@ Use CDP para acessar a Accessibility Tree:
 def find_by_accessibility_role(driver, role, name=None):
     """
     Encontra elemento por role de acessibilidade.
-    
+
     Args:
         driver: WebDriver instance
         role: Role ARIA (ex: 'button', 'link', 'textbox')
         name: Nome acessível do elemento (opcional)
-        
+
     Returns:
         WebElement ou None
-        
+
     Example:
         button = find_by_accessibility_role(driver, 'button', 'Confirm')
     """
     # Habilitar CDP
     driver.execute_cdp_cmd('Accessibility.enable', {})
-    
+
     # Obter Accessibility Tree
     ax_tree = driver.execute_cdp_cmd('Accessibility.getFullAXTree', {})
-    
+
     # Procurar nó com role e name
     for node in ax_tree['nodes']:
         if node.get('role', {}).get('value') == role:
             if name is None or node.get('name', {}).get('value') == name:
                 # Obter backend node ID
                 backend_node_id = node.get('backendDOMNodeId')
-                
+
                 if backend_node_id:
                     # Resolver para WebElement
                     result = driver.execute_cdp_cmd(
                         'DOM.resolveNode',
                         {'backendNodeId': backend_node_id}
                     )
-                    
+
                     # Retornar elemento
                     object_id = result['object']['objectId']
                     element = driver.execute_script(
@@ -201,7 +201,7 @@ def find_by_accessibility_role(driver, role, name=None):
                         {'objectId': object_id}
                     )
                     return element
-    
+
     return None
 ```
 
@@ -248,14 +248,14 @@ Use `getEventListeners()` via console injection para descobrir handlers:
 def get_event_listeners(driver, selector):
     """
     Obtém event listeners de um elemento.
-    
+
     Args:
         driver: WebDriver instance
         selector: Seletor CSS do elemento
-        
+
     Returns:
         Dict com tipos de eventos e handlers
-        
+
     Example:
         listeners = get_event_listeners(driver, "button.next")
         # {'click': [{'listener': 'function() { api.navigateTo("step2") }'}]}
@@ -263,10 +263,10 @@ def get_event_listeners(driver, selector):
     script = """
     const element = document.querySelector(arguments[0]);
     if (!element) return null;
-    
+
     // getEventListeners só funciona no console, então usamos alternativa
     const listeners = {};
-    
+
     // Tentar obter listeners via propriedades do elemento
     for (let key in element) {
         if (key.startsWith('on')) {
@@ -276,7 +276,7 @@ def get_event_listeners(driver, selector):
             }
         }
     }
-    
+
     return listeners;
     """
     return driver.execute_script(script, selector)
@@ -290,14 +290,14 @@ Em vez de clicar no botão, execute a função JavaScript diretamente:
 def direct_route(driver, selector):
     """
     Executa função de navegação diretamente sem clicar.
-    
+
     Args:
         driver: WebDriver instance
         selector: Seletor do botão/link
-        
+
     Returns:
         True se navegação bem-sucedida
-        
+
     Example:
         # Botão chama: api.navigateTo('step2')
         # Em vez de clicar, executar diretamente
@@ -306,7 +306,7 @@ def direct_route(driver, selector):
     script = """
     const element = document.querySelector(arguments[0]);
     if (!element) return false;
-    
+
     // Tentar extrair função de navegação
     const onclick = element.onclick;
     if (onclick) {
@@ -314,7 +314,7 @@ def direct_route(driver, selector):
         onclick.call(element);
         return true;
     }
-    
+
     // Tentar extrair de atributos data-*
     const dataAction = element.getAttribute('data-action');
     if (dataAction) {
@@ -322,14 +322,14 @@ def direct_route(driver, selector):
         eval(dataAction);
         return true;
     }
-    
+
     // Tentar extrair href de navegação
     const href = element.getAttribute('href') || element.getAttribute('data-href');
     if (href && !href.startsWith('#')) {
         window.location.href = href;
         return true;
     }
-    
+
     return false;
     """
     return driver.execute_script(script, selector)
@@ -383,14 +383,14 @@ MATRIX_MAP = {
 def dimensional_shift(driver, context_path):
     """
     Executa sequência de mudanças de contexto.
-    
+
     Args:
         driver: WebDriver instance
         context_path: Lista de contextos a navegar
-        
+
     Returns:
         True se bem-sucedido
-        
+
     Example:
         context_path = [
             {"type": "default"},
@@ -400,22 +400,22 @@ def dimensional_shift(driver, context_path):
     """
     # Sempre começar do contexto padrão
     driver.switch_to.default_content()
-    
+
     current_element = None
-    
+
     for context in context_path:
         context_type = context.get("type")
-        
+
         if context_type == "default":
             # Já estamos no default
             continue
-            
+
         elif context_type == "iframe":
             # Mudar para iframe
             iframe_selector = context.get("selector")
             iframe = driver.find_element(By.CSS_SELECTOR, iframe_selector)
             driver.switch_to.frame(iframe)
-            
+
         elif context_type == "shadow":
             # Entrar em Shadow DOM
             shadow_selector = context.get("selector")
@@ -424,19 +424,19 @@ def dimensional_shift(driver, context_path):
             return host ? host.shadowRoot : null;
             """
             shadow_root = driver.execute_script(script, shadow_selector)
-            
+
             if not shadow_root:
                 return False
-            
+
             # Armazenar shadow root para próximas operações
             current_element = shadow_root
-            
+
         elif context_type == "nested_iframe":
             # Iframe dentro de iframe
             iframe_selector = context.get("selector")
             iframe = driver.find_element(By.CSS_SELECTOR, iframe_selector)
             driver.switch_to.frame(iframe)
-    
+
     return True
 ```
 
@@ -476,16 +476,16 @@ driver.switch_to.default_content()
 ```python
 class ContextStack:
     """Pilha para rastrear contexto atual e permitir rollback."""
-    
+
     def __init__(self, driver):
         self.driver = driver
         self.stack = [{"type": "default"}]
-    
+
     def push(self, context):
         """Adiciona novo contexto à pilha."""
         self.stack.append(context)
         self._apply_context(context)
-    
+
     def pop(self):
         """Remove contexto atual e volta ao anterior."""
         if len(self.stack) > 1:
@@ -494,16 +494,16 @@ class ContextStack:
             self.driver.switch_to.default_content()
             for context in self.stack[1:]:
                 self._apply_context(context)
-    
+
     def reset(self):
         """Volta ao contexto padrão."""
         self.driver.switch_to.default_content()
         self.stack = [{"type": "default"}]
-    
+
     def _apply_context(self, context):
         """Aplica mudança de contexto."""
         context_type = context.get("type")
-        
+
         if context_type == "iframe":
             iframe = self.driver.find_element(
                 By.CSS_SELECTOR,
@@ -541,33 +541,33 @@ MATRIX_MAP = {
         # Identificação
         "selector": "button.generate-key",
         "depth": 2,
-        
+
         # Contexto dimensional
         "context_path": [
             {"type": "default"},
             {"type": "iframe", "selector": "iframe#console-frame"},
             {"type": "shadow", "selector": "api-console"}
         ],
-        
+
         # Navegação
         "exits": ["KEY_GENERATED_MODAL", "ERROR_DIALOG"],
         "entry_action": "click_api_keys_menu",
-        
+
         # Validação
         "markers": [
             "button.generate-key",
             "span.key-label"
         ],
-        
+
         # Acessibilidade
         "accessibility": {
             "role": "button",
             "name": "Generate API Key"
         },
-        
+
         # Event routing
         "direct_route": "api.keys.generate()",
-        
+
         # Descrição
         "description": "Botão de geração de API key (iframe + shadow DOM)"
     }
@@ -580,24 +580,24 @@ MATRIX_MAP = {
 def leap_to(driver, zone_name, matrix_map):
     """
     Salta para zona com suporte a contexto dimensional.
-    
+
     Args:
         driver: WebDriver instance
         zone_name: Nome da zona alvo
         matrix_map: Dicionário do Matrix Map
-        
+
     Returns:
         True se bem-sucedido
     """
     zone = matrix_map.get(zone_name)
     if not zone:
         return False
-    
+
     # 1. Executar dimensional shift se necessário
     context_path = zone.get("context_path", [{"type": "default"}])
     if not dimensional_shift(driver, context_path):
         return False
-    
+
     # 2. Tentar direct routing primeiro
     direct_route_cmd = zone.get("direct_route")
     if direct_route_cmd:
@@ -606,7 +606,7 @@ def leap_to(driver, zone_name, matrix_map):
             return True
         except:
             pass  # Fallback para método tradicional
-    
+
     # 3. Tentar acessibilidade
     accessibility = zone.get("accessibility")
     if accessibility:
@@ -618,12 +618,12 @@ def leap_to(driver, zone_name, matrix_map):
         if element:
             element.click()
             return True
-    
+
     # 4. Fallback: seletor tradicional
     selector = zone.get("selector")
     element = driver.find_element(By.CSS_SELECTOR, selector)
     element.click()
-    
+
     return True
 ```
 
@@ -635,7 +635,7 @@ def leap_to(driver, zone_name, matrix_map):
 def inject_zone_marker(driver, zone_name, color="cyan"):
     """
     Injeta marcador visual na zona atual (debug).
-    
+
     Args:
         driver: WebDriver instance
         zone_name: Nome da zona
@@ -656,9 +656,9 @@ def inject_zone_marker(driver, zone_name, color="cyan"):
     overlay.style.fontFamily = 'monospace';
     overlay.style.fontSize = '14px';
     overlay.textContent = 'ZONE: {zone_name}';
-    
+
     document.body.appendChild(overlay);
-    
+
     // Remover após 3 segundos
     setTimeout(() => overlay.remove(), 3000);
     """

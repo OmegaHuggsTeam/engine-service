@@ -17,22 +17,28 @@ def _simple_split(text: str, chunk_size: int, overlap: int) -> list[str]:
     Split recursivo simples (fallback sem langchain).
     Divide por parágrafos, depois por sentenças, depois por palavras.
     """
-    chunks = []
     separators = ["\n\n", "\n", ". ", " "]
-    
+
     def split_recursive(text_part: str, sep_index: int = 0) -> list[str]:
         if sep_index >= len(separators):
-            return [text_part[i:i + chunk_size] for i in range(0, len(text_part), chunk_size - overlap)] if text_part else []
-        
+            return (
+                [
+                    text_part[i : i + chunk_size]
+                    for i in range(0, len(text_part), chunk_size - overlap)
+                ]
+                if text_part
+                else []
+            )
+
         sep = separators[sep_index]
         parts = text_part.split(sep) if sep else list(text_part)
-        
+
         current_chunk = ""
         result = []
-        
+
         for i, part in enumerate(parts):
             to_add = part + (sep if i < len(parts) - 1 and sep else "")
-            
+
             if len(current_chunk) + len(to_add) <= chunk_size:
                 current_chunk += to_add
             else:
@@ -43,12 +49,12 @@ def _simple_split(text: str, chunk_size: int, overlap: int) -> list[str]:
                     current_chunk = ""
                 else:
                     current_chunk = to_add[-overlap:] if overlap else "" + to_add
-        
+
         if current_chunk.strip():
             result.append(current_chunk.strip())
-        
+
         return result
-    
+
     return split_recursive(text)
 
 
@@ -60,13 +66,13 @@ def split_text(
 ) -> list[dict]:
     """
     Divide o texto em chunks com overlap.
-    
+
     Args:
         text: Texto a ser dividido
         chunk_size: Tamanho aproximado do chunk em caracteres
         chunk_overlap: Overlap entre chunks
         use_langchain: Se True, usa RecursiveCharacterTextSplitter do LangChain
-    
+
     Returns:
         Lista de dicts com 'content' e metadata base
     """
@@ -87,7 +93,7 @@ def split_text(
             chunks = _simple_split(text, chunk_size, chunk_overlap)
     else:
         chunks = _simple_split(text, chunk_size, chunk_overlap)
-    
+
     return [{"content": c, "char_count": len(c)} for c in chunks]
 
 
@@ -100,27 +106,27 @@ def process_txt_file(
 ) -> list[dict]:
     """
     Lê um arquivo .txt da pasta raw e executa o split inicial.
-    
+
     Args:
         file_path: Caminho para o arquivo .txt
         source_file: Nome do curso/aula (metadata)
         category: Categoria (Marketing, Analytics, etc)
         output_dir: Diretório para salvar chunks (opcional)
-    
+
     Returns:
         Lista de chunks com metadata
     """
     if not file_path.exists():
         raise FileNotFoundError(f"Arquivo não encontrado: {file_path}")
-    
+
     if file_path.suffix.lower() != ".txt":
         raise ValueError(f"Esperado arquivo .txt, recebido: {file_path.suffix}")
-    
+
     text = file_path.read_text(encoding="utf-8", errors="replace")
     source_name = source_file or file_path.stem
-    
+
     chunks = split_text(text)
-    
+
     # Adiciona metadata conforme Blueprint
     for i, chunk in enumerate(chunks):
         chunk["source_file"] = source_name
@@ -128,13 +134,14 @@ def process_txt_file(
         chunk["category"] = category or "Uncategorized"
         chunk["timestamp"] = None  # Preenchido quando for vídeo
         chunk["agent_specialty"] = agent_specialty or "Uncategorized"
-    
+
     if output_dir:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         safe_name = source_name.replace("/", "_").replace("\\", "_")
         output_file = output_dir / f"{safe_name}_chunks.json"
         import json
+
         output_file.write_text(
             json.dumps(chunks, ensure_ascii=False, indent=2),
             encoding="utf-8",
@@ -144,6 +151,7 @@ def process_txt_file(
     # Insere automaticamente no ChromaDB
     try:
         from src.utils.vector_db import add_chunks
+
         added = add_chunks(chunks)
         print(f"[OK] {added} chunks inseridos no ChromaDB")
     except Exception as e:
@@ -176,7 +184,9 @@ def main():
     if clean_files:
         for txt_file in clean_files:
             source_name = _get_source_name(txt_file, processed_dir).replace("_clean", "")
-            print(f"\nProcessando: {txt_file.relative_to(processed_dir) if processed_dir in txt_file.parents else txt_file.name}")
+            print(
+                f"\nProcessando: {txt_file.relative_to(processed_dir) if processed_dir in txt_file.parents else txt_file.name}"
+            )
             chunks = process_txt_file(txt_file, source_file=source_name, output_dir=chunks_dir)
             print(f"  -> {len(chunks)} chunks gerados")
         return
@@ -194,7 +204,9 @@ def main():
 
     for txt_file in txt_files:
         source_name = _get_source_name(txt_file, raw_dir)
-        print(f"\nProcessando: {txt_file.relative_to(raw_dir) if raw_dir in txt_file.parents else txt_file.name}")
+        print(
+            f"\nProcessando: {txt_file.relative_to(raw_dir) if raw_dir in txt_file.parents else txt_file.name}"
+        )
         chunks = process_txt_file(txt_file, source_file=source_name, output_dir=chunks_dir)
         print(f"  -> {len(chunks)} chunks gerados")
 

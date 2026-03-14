@@ -6,59 +6,60 @@ para detectar erros antes da execução, com sistema de recuperação iterativa.
 """
 
 from typing import Optional, Tuple
+
 from .error_detection import ErrorContext
 
 
 class AlchemistsFilter:
     """Sistema de validação robusta com compile() e feedback iterativo."""
-    
+
     MAX_RECOVERY_ATTEMPTS = 2
-    
+
     @staticmethod
     def validate_syntax(code: str) -> Tuple[bool, Optional[str]]:
         """
         Valida sintaxe do código usando compile().
-        
+
         Args:
             code: Código Python a validar
-            
+
         Returns:
             (is_valid, error_message)
         """
         try:
-            compile(code, '<divine_inspiration>', 'exec')
+            compile(code, "<divine_inspiration>", "exec")
             return True, None
         except SyntaxError as e:
             error_msg = f"SyntaxError at line {e.lineno}: {e.msg}"
             # Log será feito pelo chamador
             return False, error_msg
-    
+
     @staticmethod
     def build_recovery_prompt(
         original_context: ErrorContext,
         failed_code: str,
         error_message: str,
         error_type: str,  # "syntax" ou "execution"
-        attempt_number: int
+        attempt_number: int,
     ) -> str:
         """
         Constrói prompt de recuperação com feedback do erro.
-        
+
         Args:
             original_context: Contexto do erro original
             failed_code: Código que falhou
             error_message: Mensagem de erro
             error_type: Tipo de erro ("syntax" ou "execution")
             attempt_number: Número da tentativa atual
-            
+
         Returns:
             Prompt formatado para Groq
         """
         error_context = {
             "syntax": f"O código gerado tem um erro de sintaxe:\n```\n{error_message}\n```\n",
-            "execution": f"O código executou mas falhou com erro:\n```\n{error_message}\n```\n"
+            "execution": f"O código executou mas falhou com erro:\n```\n{error_message}\n```\n",
         }
-        
+
         return f"""
 The previous code I generated failed. Here's what happened:
 
@@ -76,7 +77,7 @@ The previous code I generated failed. Here's what happened:
 {error_context[error_type]}
 
 **Recovery Attempt {attempt_number}/{AlchemistsFilter.MAX_RECOVERY_ATTEMPTS}:**
-Please generate a DIFFERENT approach using alternative Selum commands. 
+Please generate a DIFFERENT approach using alternative Selum commands.
 
 **Available Selum Commands:**
 - selum.strike(selector, by=By.CSS_SELECTOR, strategy='smart') - Click with fallback

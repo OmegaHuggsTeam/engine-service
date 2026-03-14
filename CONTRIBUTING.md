@@ -224,12 +224,12 @@ def search_chunks(chunks, query, top_k=5):
 def analyze_pod_logs(logs: str, pod_name: str = "", namespace: str = "") -> str:
     """
     Analisa logs de Pod em CrashLoopBackOff.
-    
+
     Args:
         logs: Conteúdo dos logs do Pod
         pod_name: Nome do Pod (opcional)
         namespace: Namespace (opcional)
-        
+
     Returns:
         Análise estruturada com causa raiz e sugestões
     """
@@ -310,11 +310,11 @@ export function AgentCard({ name, status, onSelect }: AgentCardProps) {
 // ✅ BOM - Prefixo "use"
 function useAgentStatus(agentName: string) {
   const [status, setStatus] = useState<AgentStatus | null>(null);
-  
+
   useEffect(() => {
     fetchAgentStatus(agentName).then(setStatus);
   }, [agentName]);
-  
+
   return status;
 }
 ```
@@ -447,13 +447,13 @@ from src.neural_link.agents.specialist_agent import SpecialistAgent
 
 class TestSpecialistAgent:
     """Testes para SpecialistAgent."""
-    
+
     def test_load_knowledge_returns_list(self):
         """load_knowledge deve retornar lista de chunks."""
         agent = SpecialistAgent()
         chunks = agent.load_knowledge("test_category")
         assert isinstance(chunks, list)
-    
+
     def test_execute_with_invalid_mode_raises_error(self):
         """execute com mode inválido deve levantar ValueError."""
         agent = SpecialistAgent()
@@ -686,10 +686,10 @@ class Agent:
 class Agent:
     def execute(self, task: str) -> str:
         return self._process(task)
-    
+
     def execute_async(self, task: str):  # Não usado ainda
         pass
-    
+
     def execute_batch(self, tasks: list):  # Não usado ainda
         pass
 ```
@@ -719,7 +719,7 @@ class Agent:
 
 ---
 
-**Última Atualização**: 2026-03-03  
+**Última Atualização**: 2026-03-03
 **Mantido por**: Neural Link Team
 
 ---

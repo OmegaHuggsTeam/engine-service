@@ -26,7 +26,8 @@ def load_chunks(chunks_dir: Path = CHUNKS_DIR) -> list[dict]:
     Tolera JSON vazio, inválido ou formato {"chunks": [...]}.
     """
     try:
-        from src.utils.vector_db import get_all, count
+        from src.utils.vector_db import count, get_all
+
         n = count()
         if n > 0:
             return get_all()
@@ -47,7 +48,9 @@ def load_chunks(chunks_dir: Path = CHUNKS_DIR) -> list[dict]:
                 all_chunks.extend(c for c in data if isinstance(c, dict) and c.get("content"))
             elif isinstance(data, dict):
                 if "chunks" in data:
-                    all_chunks.extend(c for c in data["chunks"] if isinstance(c, dict) and c.get("content"))
+                    all_chunks.extend(
+                        c for c in data["chunks"] if isinstance(c, dict) and c.get("content")
+                    )
                 elif data.get("content"):
                     all_chunks.append(data)
         except (json.JSONDecodeError, OSError) as e:
@@ -62,14 +65,14 @@ def _keyword_search(chunks: list[dict], query: str, top_k: int = TOP_K_CHUNKS) -
     Conta quantas palavras da query aparecem em cada chunk.
     """
     query_words = set(q.lower() for q in query.split() if len(q) > 2)
-    
+
     scored = []
     for chunk in chunks:
         content = chunk.get("content", "").lower()
         matches = sum(1 for w in query_words if w in content)
         if matches > 0:
             scored.append((matches, chunk))
-    
+
     scored.sort(key=lambda x: -x[0])
     return [c for _, c in scored[:top_k]]
 
@@ -80,11 +83,11 @@ def _vector_search(chunks: list[dict], query: str, top_k: int = TOP_K_CHUNKS) ->
     """
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.metrics.pairwise import cosine_similarity
-    
+
     contents = [c.get("content", "") for c in chunks]
     if not contents or not any(contents):
         return []
-    
+
     vectorizer = TfidfVectorizer(
         max_features=5000,
         ngram_range=(1, 2),
@@ -110,7 +113,9 @@ def search_chunks(
     quando disponível, senão TF-IDF ou keywords.
     """
     try:
-        from src.utils.vector_db import search as chroma_search, count
+        from src.utils.vector_db import count
+        from src.utils.vector_db import search as chroma_search
+
         if count() > 0:
             return chroma_search(query, top_k)
     except Exception:
@@ -171,49 +176,52 @@ def main():
     """Loop de chat no terminal."""
     print("Carregando chunks...")
     chunks = load_chunks()
-    
+
     if not chunks:
         print("[ERRO] Nenhum chunk encontrado em data/chunks.")
         print("Execute o processor para gerar chunks antes de usar o agente.")
         return
-    
+
     try:
         from src.utils.llm_client import _load_groq_keys
+
         if not _load_groq_keys():
-            print("[ERRO] Configure GROQ_API_KEY ou GROQ_KEY_1..10 no .env (obtenha em console.groq.com)")
+            print(
+                "[ERRO] Configure GROQ_API_KEY ou GROQ_KEY_1..10 no .env (obtenha em console.groq.com)"
+            )
             return
     except Exception as e:
         print(f"[ERRO] Falha ao validar chaves: {e}")
         return
-    
+
     print(f"[OK] {len(chunks)} chunks carregados.")
     print("\n" + "=" * 50)
     print("  Agente de Marketing - Diretor de Elite")
     print("  Baseado exclusivamente no material do curso")
     print("  Digite 'sair' para encerrar")
     print("=" * 50 + "\n")
-    
+
     while True:
         try:
             question = input("Voce: ").strip()
         except (EOFError, KeyboardInterrupt):
             print("\nAte logo!")
             break
-        
+
         if not question:
             continue
-        
+
         if question.lower() in ("sair", "exit", "quit"):
             print("Ate logo!")
             break
-        
+
         print("\nAgente: ", end="", flush=True)
         try:
             answer = ask_agent(chunks, question)
             print(answer)
         except Exception as e:
             print(f"[ERRO] {e}")
-        
+
         print()
 
 

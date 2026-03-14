@@ -467,6 +467,6 @@ python bin/calibrate_ui.py
 
 ---
 
-**Status:** 🟢 Infraestrutura Completa e Pronta  
-**Última Atualização:** 2026-03-03  
+**Status:** 🟢 Infraestrutura Completa e Pronta
+**Última Atualização:** 2026-03-03
 **Responsável:** Kiro (Arquiteto de Infraestrutura)

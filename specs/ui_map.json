@@ -4,13 +4,13 @@
   "description": "Mapeamento de elementos da UI para automação do Viajante",
   "version": "1.0.0",
   "last_updated": "2026-03-03",
-  
+
   "screen": {
     "width": 1920,
     "height": 1080,
     "notes": "Ajustar conforme resolução real do monitor"
   },
-  
+
   "elements": {
     "kiro_chat_input": {
       "name": "Campo de entrada do chat do Kiro",
@@ -29,7 +29,7 @@
       "safe_zone": true,
       "notes": "Geralmente localizado na parte inferior da janela"
     },
-    
+
     "kiro_send_button": {
       "name": "Botão de enviar mensagem do Kiro",
       "coordinates": {
@@ -47,7 +47,7 @@
       "safe_zone": true,
       "notes": "Geralmente à direita do campo de entrada"
     },
-    
+
     "kiro_window": {
       "name": "Janela principal do Kiro",
       "coordinates": {
@@ -65,7 +65,7 @@
       "safe_zone": true,
       "notes": "Pode variar se janela não estiver maximizada"
     },
-    
+
     "jitbit_window": {
       "name": "Janela do Jitbit Macro Recorder",
       "coordinates": {
@@ -83,7 +83,7 @@
       "safe_zone": true,
       "notes": "Ajustar conforme posição real da janela"
     },
-    
+
     "jitbit_record_button": {
       "name": "Botão de gravar macro no Jitbit",
       "coordinates": {
@@ -101,7 +101,7 @@
       "safe_zone": true,
       "notes": "Geralmente no topo da janela do Jitbit"
     },
-    
+
     "jitbit_play_button": {
       "name": "Botão de executar macro no Jitbit",
       "coordinates": {
@@ -119,7 +119,7 @@
       "safe_zone": true,
       "notes": "Ao lado do botão de gravar"
     },
-    
+
     "desktop_center": {
       "name": "Centro do desktop",
       "coordinates": {
@@ -137,7 +137,7 @@
       "safe_zone": true,
       "notes": "Posição de referência segura"
     },
-    
+
     "emergency_safe_spot": {
       "name": "Posição de emergência",
       "coordinates": {
@@ -156,7 +156,7 @@
       "notes": "Usado em situações de emergência"
     }
   },
-  
+
   "forbidden_zones": {
     "system_tray": {
       "name": "Bandeja do sistema",
@@ -170,7 +170,7 @@
       "reason": "Contém botões críticos do sistema",
       "risk_level": "high"
     },
-    
+
     "window_close_buttons": {
       "name": "Botões de fechar janelas",
       "region": {
@@ -183,7 +183,7 @@
       "reason": "Pode encerrar aplicações importantes",
       "risk_level": "high"
     },
-    
+
     "taskbar_start": {
       "name": "Botão Iniciar do Windows",
       "region": {
@@ -197,7 +197,7 @@
       "risk_level": "medium"
     }
   },
-  
+
   "landmarks": {
     "home_position": {
       "name": "Posição inicial/repouso",
@@ -207,7 +207,7 @@
       },
       "description": "Centro da tela - posição padrão de repouso"
     },
-    
+
     "emergency_position": {
       "name": "Posição de emergência",
       "coordinates": {
@@ -217,7 +217,7 @@
       "description": "Canto superior esquerdo - usado em emergency stop"
     }
   },
-  
+
   "calibration": {
     "last_calibrated": null,
     "calibration_required": true,
@@ -228,7 +228,7 @@
       "Valores atuais são estimativas e devem ser ajustados"
     ]
   },
-  
+
   "usage_instructions": {
     "how_to_use": [
       "1. Carregue este JSON no seu script Python",

@@ -75,7 +75,7 @@ def _cleanup_profile_locks():
 if sys.platform == "win32":
     import codecs
     sys.stdout = codecs.getwriter("utf-8")(
-        sys.stdout.buffer, 
+        sys.stdout.buffer,
         errors="replace"
     )
 ```
@@ -145,7 +145,7 @@ Para adicionar funcionalidades avançadas:
 1. **Steady Gaze Integration:**
    ```python
    from src.steady_gaze.recon import SteadyGazeRecon
-   
+
    # Após navegação bem-sucedida
    steady_gaze = SteadyGazeRecon(driver)
    report = steady_gaze.analyze_full()
@@ -154,7 +154,7 @@ Para adicionar funcionalidades avançadas:
 2. **API Key Extraction:**
    ```python
    from src.extractors.web_extractor import execute_identity_swap
-   
+
    # Após navegação para Groq
    api_key = execute_identity_swap(driver)
    ```
@@ -162,7 +162,7 @@ Para adicionar funcionalidades avançadas:
 3. **Healing Strategies:**
    ```python
    from src.utils.evolutionary_orchestrator import SelfHealingManager
-   
+
    # Para retry automático
    manager = SelfHealingManager(profile_path)
    ```

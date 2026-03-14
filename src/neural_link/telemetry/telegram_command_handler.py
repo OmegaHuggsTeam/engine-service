@@ -9,7 +9,6 @@ enquanto processa.
 import json
 import logging
 import os
-import re
 import tempfile
 import threading
 import time
@@ -27,6 +26,7 @@ LONG_POLL_TIMEOUT = 30
 PENDING_DEPLOY_EXPIRY_SEC = 300  # 5 min
 GATEWAY_URL = os.environ.get("GATEWAY_URL", "http://localhost:8766")
 
+
 # Hugo = dono do lab (dashboard completo). Amigos = apenas busca e ajuda.
 def _get_hugo_user_id() -> int:
     val = os.environ.get("AUTHORIZED_CHAT_ID", "") or ""
@@ -43,7 +43,9 @@ _pending_deployments: dict[int, dict] = {}
 _pending_lock = threading.Lock()
 
 # Persistência: amigos que já deram /start (para log de "amigo novo")
-_STARTED_USERS_FILE = Path(__file__).resolve().parent.parent.parent.parent / "data" / "telegram_started_users.json"
+_STARTED_USERS_FILE = (
+    Path(__file__).resolve().parent.parent.parent.parent / "data" / "telegram_started_users.json"
+)
 
 
 def _api_url(method: str) -> str:
@@ -74,7 +76,9 @@ def _add_started_user(user_id: int) -> bool:
     users.add(user_id)
     try:
         _STARTED_USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        _STARTED_USERS_FILE.write_text(json.dumps({"user_ids": list(users)}, indent=2), encoding="utf-8")
+        _STARTED_USERS_FILE.write_text(
+            json.dumps({"user_ids": list(users)}, indent=2), encoding="utf-8"
+        )
     except Exception:
         pass
     return True
@@ -122,8 +126,12 @@ def _ingest_url(url: str) -> tuple[bool, str]:
     try:
         if _is_github_repo_url(url):
             from src.extractors.github_ingestor import ingest_repository
+
             stats = ingest_repository(url, save_to_chromadb=True)
-            return True, f"Repositório ingerido: {stats['workflows_processed']} workflows, {stats['chunks_saved']} chunks."
+            return (
+                True,
+                f"Repositório ingerido: {stats['workflows_processed']} workflows, {stats['chunks_saved']} chunks.",
+            )
 
         if _is_json_url(url):
             from src.extractors.n8n_extractor import extract_operation_modules, is_n8n_workflow
@@ -172,13 +180,13 @@ def _explain_workflow(url: str) -> str:
 
     try:
         from src.neural_link.agents.specialist_agent import SpecialistAgent
+
         agent = SpecialistAgent()
         agent.load_knowledge("external_template")
         task = (
             f"Explique os workflows e a estrutura deste recurso: {url}\n\n"
             "Descreva os nodes, conexões e fluxo de dados. "
             "Cite a fonte (source_url) quando disponível."
-
         )
         return agent.execute(task, chunk_type="external_template")
     except Exception as e:
@@ -189,7 +197,9 @@ def _explain_workflow(url: str) -> str:
         return f"❌ Erro ao explicar: {msg}"
 
 
-def _send_message(chat_id: int, text: str, reply_markup: Optional[dict] = None, parse_mode: Optional[str] = None) -> bool:
+def _send_message(
+    chat_id: int, text: str, reply_markup: Optional[dict] = None, parse_mode: Optional[str] = None
+) -> bool:
     """Envia mensagem de texto."""
     if not TELEGRAM_BOT_TOKEN:
         return False
@@ -294,7 +304,14 @@ def _is_cluster_connection_error(exc: BaseException) -> bool:
     err = str(exc).lower()
     return any(
         x in err
-        for x in ("connection refused", "connection reset", "dns", "name or service not known", "timed out", "timeout")
+        for x in (
+            "connection refused",
+            "connection reset",
+            "dns",
+            "name or service not known",
+            "timed out",
+            "timeout",
+        )
     )
 
 
@@ -310,6 +327,7 @@ def _restart_pod(namespace: str, pod_name: str) -> tuple[bool, str]:
     """Reinicia Pod via kubectl delete (K8s recria automaticamente)."""
     try:
         import subprocess
+
         result = subprocess.run(
             ["kubectl", "delete", "pod", pod_name, "-n", namespace, "--wait=false"],
             capture_output=True,
@@ -327,6 +345,7 @@ def _get_pod_logs(namespace: str, pod_name: str, tail: int = 100) -> str:
     """Obtém logs do Pod via KubectlLogAnalyzer."""
     try:
         from src.neural_link.k8s_monitoring.log_analyzer import KubectlLogAnalyzer
+
         analyzer = KubectlLogAnalyzer(tail_lines=tail)
         return analyzer.get_pod_logs(pod_name, namespace) or ""
     except Exception as e:
@@ -374,26 +393,26 @@ def _create_n8n_workflow(objective: str) -> str:
     """
     try:
         from src.neural_link.agents.composer_agent import ComposerAgent
-        
+
         agent = ComposerAgent()
         result = agent.compose_workflow(objective)
-        
+
         if "error" in result:
             return f"❌ Erro: {result['error']}\n\n{result.get('suggestion', '')}"
-        
+
         # Salvar workflow em arquivo temporário
         import json
         from datetime import datetime
-        
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"workflow_{timestamp}.json"
         output_dir = Path("data/generated_workflows")
         output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         output_path = output_dir / filename
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(result["workflow"], f, indent=2, ensure_ascii=False)
-        
+
         # Formatar resposta
         response_lines = [
             "✅ Workflow criado com sucesso!",
@@ -407,26 +426,28 @@ def _create_n8n_workflow(objective: str) -> str:
             "",
             "🔧 Templates utilizados:",
         ]
-        
+
         for i, template in enumerate(result["templates_used"][:3], 1):
             source = template["source"].replace("github/zie619.github.io/", "")
             response_lines.append(
                 f"{i}. {template['service']} ({template['node_type']}) - {source}"
             )
-        
+
         if len(result["templates_used"]) > 3:
             response_lines.append(f"... e mais {len(result['templates_used']) - 3}")
-        
-        response_lines.extend([
-            "",
-            "💡 Próximos passos:",
-            "1. Importe o arquivo JSON no n8n",
-            "2. Configure as credenciais necessárias",
-            "3. Ative o workflow",
-        ])
-        
+
+        response_lines.extend(
+            [
+                "",
+                "💡 Próximos passos:",
+                "1. Importe o arquivo JSON no n8n",
+                "2. Configure as credenciais necessárias",
+                "3. Ative o workflow",
+            ]
+        )
+
         return "\n".join(response_lines)
-        
+
     except Exception as e:
         logger.exception("ComposerAgent falhou: %s", e)
         msg = str(e)
@@ -494,13 +515,18 @@ def _handle_command(chat_id: int, command: str, args: str, message: Optional[dic
 
     # Comandos restritos ao Hugo
     if not is_hugo and command in ("cluster_status", "deploy_internal_n8n", "create_n8n"):
-        _send_message(chat_id, "Este comando é restrito ao administrador. Use /find_workflow ou /help.")
+        _send_message(
+            chat_id, "Este comando é restrito ao administrador. Use /find_workflow ou /help."
+        )
         return
 
     if command == "explain_workflow":
         url = args.strip()
         if not url:
-            _send_message(chat_id, "Uso: /explain_workflow <url>\n\nEx: /explain_workflow https://github.com/zie619/zie619.github.io")
+            _send_message(
+                chat_id,
+                "Uso: /explain_workflow <url>\n\nEx: /explain_workflow https://github.com/zie619/zie619.github.io",
+            )
             return
 
         _send_chat_action(chat_id, "typing")
@@ -513,7 +539,7 @@ def _handle_command(chat_id: int, command: str, args: str, message: Optional[dic
             _send_message(
                 chat_id,
                 "Uso: /create_n8n <objetivo>\n\n"
-                "Ex: /create_n8n Criar workflow que monitora webhook e envia notificação no Telegram"
+                "Ex: /create_n8n Criar workflow que monitora webhook e envia notificação no Telegram",
             )
             return
 
@@ -540,7 +566,10 @@ def _handle_command(chat_id: int, command: str, args: str, message: Optional[dic
             results = search_workflows(term, top_k=3)
         except Exception as e:
             logger.exception("find_workflow falhou: %s", e)
-            _send_message(chat_id, f"❌ Erro na busca: {e}\n\nExecute `python tools/workflow_searcher.py index` para indexar.")
+            _send_message(
+                chat_id,
+                f"❌ Erro na busca: {e}\n\nExecute `python tools/workflow_searcher.py index` para indexar.",
+            )
             return
 
         if not results:
@@ -565,6 +594,7 @@ def _handle_command(chat_id: int, command: str, args: str, message: Optional[dic
         _send_chat_action(chat_id, "typing")
         try:
             from tools.cluster_health import collect_cluster_health, format_telegram
+
             health = collect_cluster_health()
             response = format_telegram(health)
         except Exception as e:

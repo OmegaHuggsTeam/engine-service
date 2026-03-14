@@ -54,7 +54,7 @@ https://server.tail1f14ca.ts.net/webhook?key=haB9jt-wmjlsy-k77AandNNbDvE0Y2PeWp3
 
 **Ou com header:** `X-Webhook-Key: haB9jt-wmjlsy-k77AandNNbDvE0Y2PeWp3zIxZmEX6`
 
-**Method:** POST  
+**Method:** POST
 **Body:** `{"event":"modo_leitura","value1":"Modo leitura"}`
 
 ### 5. Para desligar o Funnel

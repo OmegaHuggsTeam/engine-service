@@ -17,7 +17,7 @@ graph TB
     I -->|Gera| J[n8n_capabilities.md]
     I -->|Gera| K[n8n_recipes.md]
     I -->|Gera| L[n8n_master_context.json]
-    
+
     style A fill:#e1f5ff
     style H fill:#ffe1e1
     style J fill:#e1ffe1
@@ -41,7 +41,7 @@ graph TB
     H -->|Workflow válido| I[Salva em<br/>data/generated_workflows/]
     I -->|Retorna resultado| B
     B -->|Envia resposta| J[Usuário recebe:<br/>- Arquivo JSON<br/>- Templates usados<br/>- Instruções]
-    
+
     style A fill:#e1f5ff
     style D fill:#ffe1e1
     style G fill:#fff4e1
@@ -62,7 +62,7 @@ graph TB
     F -->|Resultados| G
     G -->|Combina com pesos| H[Resultados Ranqueados]
     H -->|Top K| I[Retorna ao usuário]
-    
+
     style A fill:#e1f5ff
     style D fill:#ffe1e1
     style E fill:#ffe1e1
@@ -88,7 +88,7 @@ graph TB
     F -->|Gera| G[n8n_capabilities.md<br/>- Integrações<br/>- Serviços<br/>- Node types]
     F -->|Gera| H[n8n_recipes.md<br/>- Receitas por categoria<br/>- Fluxos detalhados]
     F -->|Gera| I[n8n_master_context.json<br/>- Best practices<br/>- Padrões globais]
-    
+
     style A fill:#ffe1e1
     style G fill:#e1ffe1
     style H fill:#e1ffe1
@@ -104,25 +104,25 @@ graph TB
         B -->|Extrai| C[n8n Workflows]
         C -->|Chunks| D[(ChromaDB)]
     end
-    
+
     subgraph "Fase 2: Conhecimento"
         D -->|Processa| E[n8n Knowledge]
         E -->|Gera| F[Knowledge Files]
         E -->|Gera| G[Master Context]
     end
-    
+
     subgraph "Fase 3: Composição"
         H[Usuário: objetivo] -->|Telegram| I[ComposerAgent]
         I -->|Busca| D
         I -->|Usa| G
         I -->|Cria| J[Workflow JSON]
     end
-    
+
     subgraph "Fase 4: Uso"
         J -->|Importa| K[n8n Platform]
         K -->|Executa| L[Automação Ativa]
     end
-    
+
     style A fill:#e1f5ff
     style D fill:#ffe1e1
     style F fill:#e1ffe1
@@ -141,32 +141,32 @@ graph TB
     B -->|telegram| C3[Trigger: Telegram]
     B -->|email| C4[Trigger: Email]
     B -->|Nenhum| C5[Trigger: Default<br/>mais comum dos templates]
-    
+
     C1 --> D[Busca templates<br/>no ChromaDB]
     C2 --> D
     C3 --> D
     C4 --> D
     C5 --> D
-    
+
     D -->|Filtra| E[Templates relevantes]
     E -->|Extrai| F[Processadores]
-    
+
     A -->|Analisa output| G{Contém output<br/>keywords?}
     G -->|telegram| H1[Output: Telegram]
     G -->|email| H2[Output: Email]
     G -->|sheets| H3[Output: GoogleSheets]
     G -->|database| H4[Output: Database]
     G -->|Nenhum| H5[Output: HTTP<br/>default]
-    
+
     F --> I[Componentes<br/>Identificados]
     H1 --> I
     H2 --> I
     H3 --> I
     H4 --> I
     H5 --> I
-    
+
     I -->|Compõe| J[Workflow Final]
-    
+
     style A fill:#e1f5ff
     style D fill:#ffe1e1
     style I fill:#fff4e1
@@ -180,23 +180,23 @@ graph TB
     A[verify_intelligence.py] -->|1. Verifica| B{Environment<br/>Variables?}
     B -->|OK| C[✅ GROQ_API_KEY]
     B -->|Falta| D[❌ Variáveis faltando]
-    
+
     A -->|2. Verifica| E{ChromaDB<br/>Acessível?}
     E -->|OK| F[✅ ChromaDB OK]
     E -->|Erro| G[❌ ChromaDB inacessível]
-    
+
     A -->|3. Verifica| H{Knowledge<br/>Files?}
     H -->|OK| I[✅ Arquivos OK]
     H -->|Falta| J[❌ Arquivos faltando]
-    
+
     A -->|4. Verifica| K{ComposerAgent<br/>Funcional?}
     K -->|OK| L[✅ Agent OK]
     K -->|Erro| M[❌ Agent com erro]
-    
+
     A -->|5. Verifica| N{Telegram<br/>Config?}
     N -->|OK| O[✅ Bot OK]
     N -->|Erro| P[❌ Bot não configurado]
-    
+
     C --> Q[Resumo Final]
     D --> Q
     F --> Q
@@ -207,10 +207,10 @@ graph TB
     M --> Q
     O --> Q
     P --> Q
-    
+
     Q -->|Todos OK| R[🎯 Sistema Funcional]
     Q -->|Algum erro| S[⚠️ Ações Recomendadas]
-    
+
     style A fill:#e1f5ff
     style R fill:#e1ffe1
     style S fill:#ffe1e1
@@ -239,7 +239,7 @@ graph TB
     M --> N
     N -->|Sucesso| O[🎯 Setup Complete!<br/>Next steps:<br/>1. Start bot<br/>2. Use /create_n8n]
     N -->|Erro| P[❌ Setup Failed<br/>Check logs]
-    
+
     style A fill:#e1f5ff
     style O fill:#e1ffe1
     style P fill:#ffe1e1
@@ -255,7 +255,7 @@ sequenceDiagram
     participant C as ComposerAgent
     participant D as ChromaDB
     participant F as FileSystem
-    
+
     U->>T: /create_n8n Webhook para Telegram
     T->>H: Recebe comando
     H->>H: Parse comando e args
@@ -288,7 +288,7 @@ stateDiagram-v2
     Configurado --> Ativo: Configura credenciais
     Ativo --> Executando: Ativa workflow
     Executando --> [*]: Automação rodando
-    
+
     Validação --> Erro: JSON inválido
     Erro --> Composição: Tenta novamente
 ```

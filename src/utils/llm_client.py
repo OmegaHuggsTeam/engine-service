@@ -2,10 +2,16 @@
 Cliente LLM - Groq como padrão (custo zero, alta velocidade).
 Suporta OpenAI e Gemini como alternativas.
 Load Balancer com múltiplas chaves Groq (GROQ_KEY_1..10).
+
+Quando litellm esta instalado e config/litellm_models.yaml existe,
+delega roteamento para LiteLLMRouter (latency-based, fallbacks, cost tracking).
+Caso contrario, mantem o roteamento manual original.
 """
 
+import asyncio
 import hashlib
 import itertools
+import logging
 import os
 import threading
 import time
@@ -16,6 +22,8 @@ from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
+
+logger = logging.getLogger(__name__)
 
 # Groq como provider padrão
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq").lower()
@@ -63,6 +71,7 @@ class KeyManager:
     Load Balancer de chaves Groq com itertools.cycle.
     Em 429: desativa chave por 60s e passa para a próxima.
     """
+
     def __init__(self, keys: list[str]):
         self._keys = [(k, 0.0) for k in keys]  # (key, cooldown_until)
         self._cycle = itertools.cycle(range(len(self._keys))) if self._keys else None
@@ -144,9 +153,47 @@ def _get_groq_key_pool():
 def _get_config() -> dict[str, Any]:
     """Retorna config do LLM baseado em LLM_PROVIDER e .env."""
     provider = LLM_PROVIDER
-    api_key = os.getenv("GROQ_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("GOOGLE_API_KEY") or os.getenv("LLM_API_KEY")
+    api_key = (
+        os.getenv("GROQ_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+        or os.getenv("GOOGLE_API_KEY")
+        or os.getenv("LLM_API_KEY")
+    )
     model = LLM_MODEL or DEFAULT_MODELS.get(provider, DEFAULT_MODELS["groq"])
     return {"provider": provider, "api_key": api_key, "model": model}
+
+
+def _get_litellm_router():
+    """
+    Retorna LiteLLMRouter singleton se disponivel, ou None.
+    Graceful: nunca levanta exception, apenas retorna None.
+    """
+    try:
+        from src.utils.litellm_router import LiteLLMRouter
+
+        router = LiteLLMRouter.from_env()
+        if router.is_available:
+            return router
+    except Exception as e:
+        logger.debug("LiteLLM Router not available: %s", e)
+    return None
+
+
+def _run_async(coro):
+    """Executa coroutine em contexto sync (compatibilidade com callers sync)."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        # Estamos dentro de um event loop — cria thread para rodar
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(asyncio.run, coro).result()
+    else:
+        return asyncio.run(coro)
 
 
 def chat_completion(
@@ -159,11 +206,39 @@ def chat_completion(
     """
     Invoca o LLM configurado. Padrão: Groq (llama-3.3-70b-versatile).
 
+    Quando LiteLLM esta disponivel, delega para LiteLLMRouter com
+    roteamento por latencia e fallbacks automaticos.
+    Caso contrario, usa o roteamento manual original.
+
     Args:
         messages: [{"role": "system"|"user"|"assistant", "content": "..."}]
         model: Override do modelo (opcional)
-        api_key: Override da API key
+        api_key: Override da API key (ignora LiteLLM se fornecida)
+        on_key_used: Callback para telemetria de chave Groq
+        max_tokens: Limite de tokens na resposta
     """
+    # ── LiteLLM delegation ──
+    # Somente delega se nao tem api_key override (respeita uso explicito)
+    if api_key is None:
+        router = _get_litellm_router()
+        if router is not None:
+            try:
+                from src.utils.litellm_router import LiteLLMRouter
+
+                tier = LiteLLMRouter.resolve_tier(model)
+                result = _run_async(
+                    router.completion_with_messages(
+                        messages=messages,
+                        model_tier=tier,
+                        max_tokens=max_tokens or 2048,
+                    )
+                )
+                return result["content"]
+            except Exception as e:
+                logger.warning("LiteLLM call failed, falling back to manual routing: %s", e)
+                # Fall through to manual routing
+
+    # ── Manual routing (fallback / backward compat) ──
     cfg = _get_config()
     model = model or cfg["model"]
     api_key = api_key or cfg["api_key"]
@@ -171,17 +246,12 @@ def chat_completion(
     if cfg["provider"] == "groq":
         if not _load_groq_keys():
             raise ValueError(
-                "Configure GROQ_API_KEY ou GROQ_KEY_1..10 no .env "
-                "(obtenha em console.groq.com)"
+                "Configure GROQ_API_KEY ou GROQ_KEY_1..10 no .env " "(obtenha em console.groq.com)"
             )
     elif cfg["provider"] == "openai" and not (api_key or os.getenv("OPENAI_API_KEY")):
-        raise ValueError(
-            "Configure OPENAI_API_KEY no .env para usar OpenAI."
-        )
+        raise ValueError("Configure OPENAI_API_KEY no .env para usar OpenAI.")
     elif cfg["provider"] == "gemini" and not (api_key or os.getenv("GOOGLE_API_KEY")):
-        raise ValueError(
-            "Configure GOOGLE_API_KEY no .env para usar Gemini."
-        )
+        raise ValueError("Configure GOOGLE_API_KEY no .env para usar Gemini.")
     elif not api_key:
         raise ValueError(
             "Configure a chave de API no .env (GROQ_API_KEY, OPENAI_API_KEY ou GOOGLE_API_KEY)."
@@ -199,7 +269,9 @@ def chat_completion(
     return _chat_openai(messages, model, api_key)
 
 
-def _chat_groq(messages: list[dict], model: str, on_key_used=None, max_tokens: int | None = None) -> str:
+def _chat_groq(
+    messages: list[dict], model: str, on_key_used=None, max_tokens: int | None = None
+) -> str:
     """Usa cliente Groq. KeyManager com rotação e retry em 429 (cooldown 60s)."""
     from groq import Groq
 
@@ -222,6 +294,7 @@ def _chat_groq(messages: list[dict], model: str, on_key_used=None, max_tokens: i
             # Record token usage + latency for cost profiling
             try:
                 from src.utils.cost_context import get_cost_profile
+
                 profile = get_cost_profile()
                 if profile and hasattr(response, "usage") and response.usage:
                     _in = getattr(response.usage, "prompt_tokens", 0)
@@ -277,7 +350,9 @@ def transcribe_audio_groq(
                     language=language,
                     response_format="text",
                 )
-            return transcription.text.strip() if hasattr(transcription, "text") else str(transcription)
+            return (
+                transcription.text.strip() if hasattr(transcription, "text") else str(transcription)
+            )
         except Exception as e:
             err_str = str(e).lower()
             if "429" in err_str or "rate limit" in err_str:

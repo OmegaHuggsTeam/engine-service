@@ -234,7 +234,7 @@ driver.execute_script("arguments[0].value = 'texto';", element)
 
 **ATENÇÃO**: Executar JavaScript direto é PROIBIDO pelo Voto de Abstração.
 
-**No SelumOfPersistence**: 
+**No SelumOfPersistence**:
 - Use `strike(strategy='force')` para JavaScript click
 - Use `steady_gaze()` para scroll
 - NUNCA modifique valores via JavaScript (especialmente em campos sensíveis)

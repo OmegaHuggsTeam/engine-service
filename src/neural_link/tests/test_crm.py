@@ -5,22 +5,20 @@ All Neo4j calls are mocked — no real Neo4j required.
 Follows test_graph_sync.py conventions.
 """
 
-import time
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.neural_link.graph import queries as q
 from src.neural_link.graph.schema import SCHEMA_QUERIES
 from src.neural_link.orchestrator.models import (
-    CrmLead,
     CrmFlow,
     CrmInteraction,
-    LeadSource,
+    CrmLead,
     FlowStatus,
+    LeadSource,
 )
-from src.neural_link.telemetry.provider import CrmEventProvider, EventType
-
+from src.neural_link.telemetry.provider import CrmEventProvider
 
 # ==================================================================
 # Fixtures
@@ -178,8 +176,8 @@ class TestCrmInteractionRecording:
 
     def test_task_executor_creates_interaction_for_lead(self):
         """TaskExecutor creates CRM interaction when lead_id is in input_data."""
-        from src.neural_link.orchestrator.task_executor import TaskExecutor
         from src.neural_link.orchestrator.models import Task, TaskType
+        from src.neural_link.orchestrator.task_executor import TaskExecutor
 
         graph = _make_graph_mock()
         executor = TaskExecutor(graph_manager=graph)
@@ -227,7 +225,9 @@ class TestCrmSchema:
 
     def test_total_schema_count(self):
         """9 CRM entries added to existing schema list."""
-        crm_names = [n for n, _ in SCHEMA_QUERIES if n.startswith(("lead_", "flow_", "interaction_"))]
+        crm_names = [
+            n for n, _ in SCHEMA_QUERIES if n.startswith(("lead_", "flow_", "interaction_"))
+        ]
         assert len(crm_names) == 9
 
 
@@ -275,6 +275,7 @@ class TestCrmGatewayEndpoints:
     def _setup_gateway(self):
         """Patch _svc.graph so endpoints have a graph."""
         from src.neural_link.api import sovereign_gateway as gw
+
         self._orig_graph = gw._svc._graph
         self._orig_init = gw._svc._initialized
         gw._svc._initialized = True
@@ -284,14 +285,17 @@ class TestCrmGatewayEndpoints:
         gw._svc._initialized = self._orig_init
 
     def test_list_leads_empty(self):
-        from src.neural_link.api.sovereign_gateway import list_crm_leads
         import asyncio
+
+        from src.neural_link.api.sovereign_gateway import list_crm_leads
+
         result = asyncio.run(list_crm_leads())
         assert result == []
 
     def test_list_leads_returns_data(self):
         from src.neural_link.api import sovereign_gateway as gw
         from src.neural_link.api.sovereign_gateway import list_crm_leads
+
         gw._svc._graph.execute_read.return_value = [
             {
                 "id": "lead_001",
@@ -307,18 +311,22 @@ class TestCrmGatewayEndpoints:
             }
         ]
         import asyncio
+
         result = asyncio.run(list_crm_leads())
         assert len(result) == 1
         assert result[0].name == "Alice"
 
     def test_crm_stats_empty(self):
-        from src.neural_link.api.sovereign_gateway import crm_stats
         import asyncio
+
+        from src.neural_link.api.sovereign_gateway import crm_stats
+
         result = asyncio.run(crm_stats())
         assert result.total_leads == 0
 
     def test_crm_stats_with_data(self):
         from src.neural_link.api import sovereign_gateway as gw
+
         gw._svc._graph.execute_read.return_value = [
             {
                 "total_leads": 10,
@@ -327,15 +335,19 @@ class TestCrmGatewayEndpoints:
                 "avg_trust": 0.72,
             }
         ]
-        from src.neural_link.api.sovereign_gateway import crm_stats
         import asyncio
+
+        from src.neural_link.api.sovereign_gateway import crm_stats
+
         result = asyncio.run(crm_stats())
         assert result.total_leads == 10
         assert result.avg_trust == 0.72
 
     def test_crm_graph_empty(self):
-        from src.neural_link.api.sovereign_gateway import get_crm_graph
         import asyncio
+
+        from src.neural_link.api.sovereign_gateway import get_crm_graph
+
         result = asyncio.run(get_crm_graph())
         assert result.nodes == []
         assert result.edges == []
@@ -389,65 +401,93 @@ class TestCrmCrudCompletion:
 
     def test_update_lead_endpoint(self):
         """PUT /crm/leads/{id} updates lead fields."""
-        from src.neural_link.api import sovereign_gateway as gw
         import asyncio
+
+        from src.neural_link.api import sovereign_gateway as gw
 
         gw._svc._graph = _make_graph_mock()
         gw._svc._graph.execute_write.return_value = [{"id": "lead_123"}]
         gw._svc._graph.execute_read.return_value = [
-            {"id": "lead_123", "name": "Updated", "email": "new@test.com", "company": "NewCo",
-             "trust": 0.5, "interaction_count": 0, "source_channel": "manual", "tags": [],
-             "created_at": "2024-01-01", "updated_at": "2024-01-02"}
+            {
+                "id": "lead_123",
+                "name": "Updated",
+                "email": "new@test.com",
+                "company": "NewCo",
+                "trust": 0.5,
+                "interaction_count": 0,
+                "source_channel": "manual",
+                "tags": [],
+                "created_at": "2024-01-01",
+                "updated_at": "2024-01-02",
+            }
         ]
 
         from src.neural_link.api.sovereign_gateway import CrmLeadUpdate
+
         body = CrmLeadUpdate(name="Updated", email="new@test.com")
         result = asyncio.run(gw.update_crm_lead("lead_123", body))
-        
+
         assert result.name == "Updated"
         assert result.email == "new@test.com"
 
     def test_delete_lead_endpoint(self):
         """DELETE /crm/leads/{id} soft-deletes lead."""
-        from src.neural_link.api import sovereign_gateway as gw
         import asyncio
+
+        from src.neural_link.api import sovereign_gateway as gw
 
         gw._svc._graph = _make_graph_mock()
         result = asyncio.run(gw.delete_crm_lead("lead_123"))
-        
+
         # Should not raise exception
         assert result is None
 
     def test_search_leads_endpoint(self):
         """GET /crm/leads/search returns scored results."""
-        from src.neural_link.api import sovereign_gateway as gw
         import asyncio
+
+        from src.neural_link.api import sovereign_gateway as gw
 
         gw._svc._graph = _make_graph_mock()
         gw._svc._graph.execute_read.return_value = [
-            {"id": "lead_123", "name": "Alice", "email": "alice@test.com", "company": "TestCo",
-             "trust": 0.8, "interaction_count": 5, "source_channel": "manual", "tags": [],
-             "created_at": "2024-01-01", "updated_at": "2024-01-02", "score": 0.95}
+            {
+                "id": "lead_123",
+                "name": "Alice",
+                "email": "alice@test.com",
+                "company": "TestCo",
+                "trust": 0.8,
+                "interaction_count": 5,
+                "source_channel": "manual",
+                "tags": [],
+                "created_at": "2024-01-01",
+                "updated_at": "2024-01-02",
+                "score": 0.95,
+            }
         ]
 
         result = asyncio.run(gw.search_crm_leads("alice"))
-        
+
         assert len(result) == 1
         assert result[0].name == "Alice"
 
     def test_lead_score_endpoint(self):
         """GET /crm/leads/{id}/score returns trust breakdown."""
-        from src.neural_link.api import sovereign_gateway as gw
         import asyncio
+
+        from src.neural_link.api import sovereign_gateway as gw
 
         gw._svc._graph = _make_graph_mock()
         gw._svc._graph.execute_read.return_value = [
-            {"id": "lead_123", "interaction_count": 10, "last_interaction": "2024-01-01T12:00:00",
-             "flow_count": 2}
+            {
+                "id": "lead_123",
+                "interaction_count": 10,
+                "last_interaction": "2024-01-01T12:00:00",
+                "flow_count": 2,
+            }
         ]
 
         result = asyncio.run(gw.get_lead_score("lead_123"))
-        
+
         assert result.lead_id == "lead_123"
         assert result.interaction_count == 10
         assert result.flow_count == 2
@@ -455,8 +495,9 @@ class TestCrmCrudCompletion:
 
     def test_recency_decay_function(self):
         """_recency_decay calculates exponential decay."""
-        from src.neural_link.api.sovereign_gateway import _recency_decay
         from datetime import datetime, timedelta
+
+        from src.neural_link.api.sovereign_gateway import _recency_decay
 
         # Recent interaction should have high score
         recent = datetime.now().isoformat()
@@ -477,12 +518,16 @@ class TestCrmCrudCompletion:
 
         graph = _make_graph_mock()
         graph.execute_read.return_value = [
-            {"id": "lead_123", "interaction_count": 20, "last_interaction": "2024-01-01T12:00:00",
-             "flow_count": 5}
+            {
+                "id": "lead_123",
+                "interaction_count": 20,
+                "last_interaction": "2024-01-01T12:00:00",
+                "flow_count": 5,
+            }
         ]
 
         trust = _recalculate_trust("lead_123", graph)
-        
+
         # Should be weighted average of components
         assert 0.0 <= trust <= 1.0
         # With max interactions (20) and max flows (5), should be high
@@ -490,49 +535,65 @@ class TestCrmCrudCompletion:
 
     def test_auto_recalculate_on_interaction(self):
         """Recording interaction auto-recalculates trust."""
-        from src.neural_link.api import sovereign_gateway as gw
         import asyncio
+
+        from src.neural_link.api import sovereign_gateway as gw
 
         gw._svc._graph = _make_graph_mock()
         gw._svc._graph.execute_read.return_value = [
-            {"id": "lead_123", "interaction_count": 5, "last_interaction": "2024-01-01T12:00:00",
-             "flow_count": 1}
+            {
+                "id": "lead_123",
+                "interaction_count": 5,
+                "last_interaction": "2024-01-01T12:00:00",
+                "flow_count": 1,
+            }
         ]
 
         from src.neural_link.api.sovereign_gateway import CrmInteractionCreate
+
         body = CrmInteractionCreate(lead_id="lead_123", channel="email", action="opened")
-        
+
         result = asyncio.run(gw.record_crm_interaction(body))
-        
+
         # Should have called _recalculate_trust
         assert "id" in result
 
     def test_update_flow_endpoint(self):
         """PUT /crm/flows/{id} updates flow fields."""
-        from src.neural_link.api import sovereign_gateway as gw
         import asyncio
+
+        from src.neural_link.api import sovereign_gateway as gw
 
         gw._svc._graph = _make_graph_mock()
         gw._svc._graph.execute_write.return_value = [{"id": "flow_123"}]
         gw._svc._graph.execute_read.return_value = [
-            {"id": "flow_123", "name": "Updated Flow", "objective": "New objective",
-             "n8n_workflow_id": None, "status": "active", "lead_ids": [], "created_at": "2024-01-01"}
+            {
+                "id": "flow_123",
+                "name": "Updated Flow",
+                "objective": "New objective",
+                "n8n_workflow_id": None,
+                "status": "active",
+                "lead_ids": [],
+                "created_at": "2024-01-01",
+            }
         ]
 
         from src.neural_link.api.sovereign_gateway import CrmFlowUpdate
+
         body = CrmFlowUpdate(name="Updated Flow", status="active")
         result = asyncio.run(gw.update_crm_flow("flow_123", body))
-        
+
         assert result.name == "Updated Flow"
         assert result.status == "active"
 
     def test_delete_flow_endpoint(self):
         """DELETE /crm/flows/{id} soft-deletes flow."""
-        from src.neural_link.api import sovereign_gateway as gw
         import asyncio
+
+        from src.neural_link.api import sovereign_gateway as gw
 
         gw._svc._graph = _make_graph_mock()
         result = asyncio.run(gw.delete_crm_flow("flow_123"))
-        
+
         # Should not raise exception
         assert result is None

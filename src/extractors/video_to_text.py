@@ -28,10 +28,18 @@ def _compress_audio_ffmpeg(input_path: Path, output_path: Path) -> Path:
     Requer FFmpeg no PATH.
     """
     cmd = [
-        "ffmpeg", "-y", "-i", str(input_path),
-        "-ar", "16000", "-ac", "1",
-        "-b:a", "32k",
-        "-map", "0:a",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(input_path),
+        "-ar",
+        "16000",
+        "-ac",
+        "1",
+        "-b:a",
+        "32k",
+        "-map",
+        "0:a",
         str(output_path),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -50,11 +58,11 @@ def _compress_audio_ffmpeg(input_path: Path, output_path: Path) -> Path:
 def extract_audio_from_video(video_path: Path, output_path: Path) -> Path:
     """
     Extrai apenas o áudio de um arquivo MP4 usando moviepy.
-    
+
     Args:
         video_path: Caminho do vídeo
         output_path: Caminho para salvar o áudio (mp3)
-    
+
     Returns:
         Caminho do arquivo de áudio gerado
     """
@@ -65,7 +73,12 @@ def extract_audio_from_video(video_path: Path, output_path: Path) -> Path:
             video.audio.write_audiofile(str(output_path))
     except (FileNotFoundError, OSError) as e:
         err_msg = str(e)
-        if "FFmpeg" in err_msg or "ffmpeg" in err_msg or "WinError 2" in err_msg or getattr(e, "winerror", None) == 2:
+        if (
+            "FFmpeg" in err_msg
+            or "ffmpeg" in err_msg
+            or "WinError 2" in err_msg
+            or getattr(e, "winerror", None) == 2
+        ):
             raise RuntimeError(
                 "FFmpeg não encontrado. Instale o FFmpeg e adicione ao PATH do Windows:\n"
                 "1) Baixe em https://ffmpeg.org/download.html (ou https://www.gyan.dev/ffmpeg/builds/)\n"
@@ -128,7 +141,7 @@ def process_video(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     output_txt = output_dir / f"{video_path.stem}.txt"
-    
+
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
         audio_path = Path(tmp.name)
 
@@ -154,15 +167,15 @@ def process_video(
             progress_callback(2, 4, "Step 2/4: Transcrevendo (Groq whisper-large-v3)...")
         print("  -> Transcrevendo via Groq API (whisper-large-v3)...")
         text = transcribe_audio(audio_path, model_name)
-        
+
         output_txt.write_text(text, encoding="utf-8")
         print(f"  -> [OK] Transcrição salva em: {output_txt}")
-        
+
         if keep_audio:
             final_audio = output_dir / f"{video_path.stem}.mp3"
             audio_path.rename(final_audio)
             print(f"  -> Áudio salvo em: {final_audio}")
-        
+
         return output_txt
     except (FileNotFoundError, OSError, RuntimeError) as e:
         if "FFmpeg" in str(e):

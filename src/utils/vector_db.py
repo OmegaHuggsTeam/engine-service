@@ -1,12 +1,17 @@
 """
 Gerenciador do ChromaDB - Vector Database central.
 Embeddings: OpenAI (se tiver créditos) ou all-MiniLM-L6-v2 local (100% grátis).
+
+Multi-Embedding: Se EMBEDDING_MODELS tiver 2+ modelos (ex: "openai,nomic"),
+delega add_chunks/search para EmbeddingManager. Caso contrario, comportamento
+identico ao original (single-model).
 """
 
 import os
 
 os.environ["PYDANTIC_SKIP_VALIDATION"] = "1"
 
+import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +23,24 @@ COLLECTION_NAME = "course_chunks"
 SELUM_ERRORS_COLLECTION = "selum_errors"
 
 load_dotenv(PROJECT_ROOT / ".env")
+
+logger = logging.getLogger(__name__)
+
+
+def _is_multi_embedding() -> bool:
+    """Verifica se multi-embedding esta ativo (2+ modelos no EMBEDDING_MODELS)."""
+    env_models = os.getenv("EMBEDDING_MODELS", "").strip()
+    if not env_models:
+        return False
+    models = [m.strip() for m in env_models.split(",") if m.strip()]
+    return len(models) >= 2
+
+
+def _get_embedding_manager():
+    """Retorna EmbeddingManager singleton (lazy import)."""
+    from src.utils.embedding_manager import EmbeddingManager
+
+    return EmbeddingManager.from_env()
 
 
 def _is_kubernetes() -> bool:
@@ -45,6 +68,7 @@ def _get_client():
     Caso contrário, usa PersistentClient (modo local).
     """
     import chromadb
+
     host = _get_chroma_host()
     if host:
         port = int(os.getenv("CHROMA_PORT", "8000"))
@@ -105,11 +129,26 @@ def add_chunks(chunks: list[dict], batch_size: int = 100) -> int:
     Usa source_file + chunk_index como id. Remove chunks existentes do mesmo
     source antes de inserir (para re-processamento).
 
+    Se EMBEDDING_MODELS tiver 2+ modelos, delega para EmbeddingManager
+    (insere em todas as colecoes). Retorna total de chunks inseridos.
+
     Returns:
         Número de chunks inseridos
     """
     if not chunks:
         return 0
+
+    # Multi-embedding: delega para EmbeddingManager
+    if _is_multi_embedding():
+        try:
+            manager = _get_embedding_manager()
+            results = manager.add_chunks(chunks, batch_size=batch_size)
+            # Retorna o max inserido (todos devem ser iguais se sem erro)
+            total = max(results.values()) if results else 0
+            logger.info(f"[Multi-Embedding] {total} chunks inseridos em {len(results)} modelos")
+            return total
+        except Exception as e:
+            logger.error(f"Multi-embedding add_chunks falhou, fallback single-model: {e}")
 
     collection = get_collection()
 
@@ -132,7 +171,9 @@ def add_chunks(chunks: list[dict], batch_size: int = 100) -> int:
         documents = [str(c.get("content", "")) for c in batch]
         metadatas = [_chunk_to_metadata(c) for c in batch]
         # Dupla garantia: força chaves e valores a string (Python 3.14 / ChromaDB)
-        metadatas = [{str(k): ("" if v is None else str(v)) for k, v in m.items()} for m in metadatas]
+        metadatas = [
+            {str(k): ("" if v is None else str(v)) for k, v in m.items()} for m in metadatas
+        ]
         collection.add(ids=ids, documents=documents, metadatas=metadatas)
 
     print(f"[OK] {len(chunks)} chunks integrados ao ChromaDB")
@@ -141,11 +182,22 @@ def add_chunks(chunks: list[dict], batch_size: int = 100) -> int:
 
 def search(query: str, top_k: int = 5) -> list[dict]:
     """
-    Busca semântica por similaridade usando embeddings OpenAI.
+    Busca semântica por similaridade usando embeddings.
+
+    Se EMBEDDING_MODELS tiver 2+ modelos, delega para EmbeddingManager
+    (busca em todas as colecoes e faz merge). Caso contrario, busca single-model.
 
     Returns:
         Lista de chunks (dicts com content, source_file, etc.)
     """
+    # Multi-embedding: delega para EmbeddingManager
+    if _is_multi_embedding():
+        try:
+            manager = _get_embedding_manager()
+            return manager.search(query, top_k=top_k)
+        except Exception as e:
+            logger.error(f"Multi-embedding search falhou, fallback single-model: {e}")
+
     collection = get_collection()
     result = collection.query(query_texts=[query], n_results=top_k)
 
@@ -167,7 +219,18 @@ def search_with_scores(query: str, top_k: int = 5) -> list[dict]:
     """
     Busca semantica retornando scores junto aos resultados.
     Cada dict contem: content, source_file, ..., score (0-1, maior = mais relevante).
+
+    Se EMBEDDING_MODELS tiver 2+ modelos, delega para EmbeddingManager
+    (que ja retorna scores normalizados e merged).
     """
+    # Multi-embedding: delega para EmbeddingManager (search ja retorna scores)
+    if _is_multi_embedding():
+        try:
+            manager = _get_embedding_manager()
+            return manager.search(query, top_k=top_k)
+        except Exception as e:
+            logger.error(f"Multi-embedding search_with_scores falhou, fallback single-model: {e}")
+
     collection = get_collection()
     result = collection.query(
         query_texts=[query],
@@ -231,7 +294,8 @@ def get_by_category(chunk_type: str) -> list[dict]:
     all_chunks = get_all()
     ct_lower = chunk_type.lower()
     return [
-        c for c in all_chunks
+        c
+        for c in all_chunks
         if (
             (c.get("category") or "").lower() == ct_lower
             or (c.get("agent_specialty") or "").lower() == ct_lower

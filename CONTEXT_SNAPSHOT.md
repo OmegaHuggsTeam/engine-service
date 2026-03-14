@@ -1,7 +1,7 @@
 # Context Snapshot – Próximo Ciclo de Desenvolvimento
 
-**Data:** 2026-03-01  
-**Projeto:** mcp-engine-service (Lab Intelligence)  
+**Data:** 2026-03-01
+**Projeto:** mcp-engine-service (Lab Intelligence)
 **Spec:** `.kiro/specs/selenium-robust-initialization/`
 
 ---
@@ -45,12 +45,12 @@ ConnectionResetError: [WinError 10054] Foi forçado o cancelamento de uma conex�
 
 ### Já implementado (design.md)
 
-1. **`_remove_profile_locks()`** – Remove SingletonLock, Parent.lock, lockfile, SingletonSocket  
-2. **`_verify_profile_ready()`** – Verifica diretório e locks antes de criar o driver  
-3. **`_focus_main_window()`** – `window.focus()` + 2s para mitigar aba fantasma  
-4. **`_robust_navigate()`** – driver.get → location.replace → Ctrl+L + send_keys  
-5. **Hard Retry (3 tentativas)** – Em `test_rotation_flow.py`  
-6. **Verificação de perfil** – Antes do loop, em `test_rotation_flow.py`  
+1. **`_remove_profile_locks()`** – Remove SingletonLock, Parent.lock, lockfile, SingletonSocket
+2. **`_verify_profile_ready()`** – Verifica diretório e locks antes de criar o driver
+3. **`_focus_main_window()`** – `window.focus()` + 2s para mitigar aba fantasma
+4. **`_robust_navigate()`** – driver.get → location.replace → Ctrl+L + send_keys
+5. **Hard Retry (3 tentativas)** – Em `test_rotation_flow.py`
+6. **Verificação de perfil** – Antes do loop, em `test_rotation_flow.py`
 7. **`_kill_chrome_for_profile()`** – taskkill + remoção de locks (test script)
 
 ### Pendente / não validado

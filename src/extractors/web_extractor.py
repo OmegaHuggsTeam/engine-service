@@ -17,9 +17,9 @@ Credenciais e URLs vêm do .env. Nunca fixe senhas no código.
 import json
 import os
 import random
-import sys
 import re
 import string
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -31,9 +31,8 @@ from selenium.common.exceptions import (
     WebDriverException,
 )
 
-from src.extractors.validators import validate_api_key, ValidationError
+from src.extractors.validators import ValidationError, validate_api_key
 from src.utils.logger import get_logger, setup_logger
-from src.utils.retry import retry
 
 # Carrega .env antes de usar variáveis
 PROJECT_ROOT = Path(__file__).parent.parent.parent
@@ -43,6 +42,7 @@ load_dotenv(PROJECT_ROOT / ".env")
 if os.getenv("EXTRACTOR_UC_TELEMETRY", "").lower() in ("true", "1", "yes"):
     try:
         from src.utils.uc_telemetry import install_telemetry
+
         install_telemetry(timeout_seconds=int(os.getenv("EXTRACTOR_UC_TELEMETRY_TIMEOUT", "10")))
     except Exception:
         pass
@@ -66,15 +66,23 @@ IDENTITY_KEYS_FILE = RAW_DIR / "identity_keys.json"
 # Sequencia de cliques ao abrir (header Google). 1o = Gmail, 2o = usuario fornecera
 # 1o: <a class="gb_Z" aria-label="Gmail " href="https://mail.google.com/...">
 _FIRST_ELEMENTS_ON_OPEN: list[tuple[str, str]] = [
-    ("css", "a.gb_Z[aria-label*='Gmail'], a[href*='mail.google.com'][aria-label*='Gmail'], a[data-pid='23'][aria-label*='Gmail']"),
+    (
+        "css",
+        "a.gb_Z[aria-label*='Gmail'], a[href*='mail.google.com'][aria-label*='Gmail'], a[data-pid='23'][aria-label*='Gmail']",
+    ),
 ]
+
 
 # Contrato de bypass: URLs e titulos que indicam travas do Chrome.
 # Estender via .env: EXTRACTOR_BYPASS_URLS=url1,url2  EXTRACTOR_BYPASS_TITLES=t1,t2
 def _get_bypass_urls():
     base = (
-        "chrome://restart", "chrome://crash", "chrome://hang",
-        "chrome://kill", "chrome://shutdown", "edge://restart",
+        "chrome://restart",
+        "chrome://crash",
+        "chrome://hang",
+        "chrome://kill",
+        "chrome://shutdown",
+        "edge://restart",
     )
     extra = os.getenv("EXTRACTOR_BYPASS_URLS", "").strip()
     return base + tuple(x.strip().lower() for x in extra.split(",") if x.strip())
@@ -82,9 +90,16 @@ def _get_bypass_urls():
 
 def _get_bypass_titles():
     base = (
-        "restore", "restaurar", "restaurar sess", "restore pages",
-        "chrome didn't", "chrome nao", "didn't shut down", "nao encerrou",
-        "restore previous", "restaurar sessao",
+        "restore",
+        "restaurar",
+        "restaurar sess",
+        "restore pages",
+        "chrome didn't",
+        "chrome nao",
+        "didn't shut down",
+        "nao encerrou",
+        "restore previous",
+        "restaurar sessao",
     )
     extra = os.getenv("EXTRACTOR_BYPASS_TITLES", "").strip()
     return base + tuple(x.strip().lower() for x in extra.split(",") if x.strip())
@@ -92,6 +107,7 @@ def _get_bypass_titles():
 
 class ExtractionError(Exception):
     """Erro durante extração de API key."""
+
     pass
 
 
@@ -104,17 +120,20 @@ CHECKPOINT_MAX_AGE_HOURS = 24
 # ANTI-HONEYPOT TECHNIQUES - Visão Híbrida
 # ============================================================================
 
-def _find_element_by_text_js(driver, text: str, tag: str = "a", case_sensitive: bool = False) -> dict | None:
+
+def _find_element_by_text_js(
+    driver, text: str, tag: str = "a", case_sensitive: bool = False
+) -> dict | None:
     """
     Encontra elemento por texto usando document.evaluate (XPath via JS).
     Ignora Shadow DOM, overlays invisíveis e outras armadilhas.
-    
+
     Args:
         driver: WebDriver do Selenium
         text: Texto a procurar
         tag: Tag HTML (default: 'a' para links)
         case_sensitive: Se True, busca case-sensitive
-    
+
     Returns:
         Dict com {element, x, y, width, height} ou None
     """
@@ -127,7 +146,7 @@ def _find_element_by_text_js(driver, text: str, tag: str = "a", case_sensitive: 
         } else {
             xpath = `//${tag}[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '${text.toLowerCase()}')]`;
         }
-        
+
         // Usar document.evaluate para buscar
         let result = document.evaluate(
             xpath,
@@ -136,13 +155,13 @@ def _find_element_by_text_js(driver, text: str, tag: str = "a", case_sensitive: 
             XPathResult.FIRST_ORDERED_NODE_TYPE,
             null
         );
-        
+
         let element = result.singleNodeValue;
         if (!element) return null;
-        
+
         // Obter coordenadas reais (mesmo se invisível para Selenium)
         let rect = element.getBoundingClientRect();
-        
+
         return {
             found: true,
             x: rect.left + rect.width / 2,
@@ -152,15 +171,15 @@ def _find_element_by_text_js(driver, text: str, tag: str = "a", case_sensitive: 
             text: element.textContent,
             href: element.href || null,
             isVisible: rect.width > 0 && rect.height > 0,
-            isInViewport: rect.top >= 0 && rect.left >= 0 && 
-                         rect.bottom <= window.innerHeight && 
+            isInViewport: rect.top >= 0 && rect.left >= 0 &&
+                         rect.bottom <= window.innerHeight &&
                          rect.right <= window.innerWidth
         };
     }
-    
+
     return findElementByText(arguments[0], arguments[1], arguments[2]);
     """
-    
+
     try:
         result = driver.execute_script(script, text, tag, case_sensitive)
         if result and result.get("found"):
@@ -170,6 +189,8 @@ def _find_element_by_text_js(driver, text: str, tag: str = "a", case_sensitive: 
     except Exception as e:
         logger.warning(f"Erro ao buscar elemento via JS: {e}")
         return None
+
+
 def _find_delivery_email_field_coordinates(driver) -> dict | None:
     """
     Localiza o campo de email de entrega e retorna suas coordenadas na tela.
@@ -262,17 +283,18 @@ def _find_delivery_email_field_coordinates(driver) -> dict | None:
 
     try:
         result = driver.execute_script(script)
-        if result and 'x' in result and 'y' in result:
+        if result and "x" in result and "y" in result:
             logger.info(f"Campo de email de entrega encontrado em ({result['x']}, {result['y']})")
-            return {"x": result['x'], "y": result['y']}
+            return {"x": result["x"], "y": result["y"]}
 
-        logger.error("Campo de email de entrega não encontrado. Procurado por labels: ['E-mail de entrega', 'Delivery email']")
+        logger.error(
+            "Campo de email de entrega não encontrado. Procurado por labels: ['E-mail de entrega', 'Delivery email']"
+        )
         return None
 
     except Exception as e:
         logger.error(f"Erro ao localizar campo de email de entrega: {e}", exc_info=True)
         return None
-
 
 
 def _update_field_with_hardware_input(x: int, y: int, new_value: str) -> bool:
@@ -328,11 +350,11 @@ def _update_field_with_hardware_input(x: int, y: int, new_value: str) -> bool:
             time.sleep(0.2)
 
             # 3. Selecionar todo o texto (Ctrl+A)
-            pyautogui.hotkey('ctrl', 'a')
+            pyautogui.hotkey("ctrl", "a")
             time.sleep(0.1)
 
             # 4. Limpar o campo (Backspace)
-            pyautogui.press('backspace')
+            pyautogui.press("backspace")
             time.sleep(0.2)
 
             # 5. Digitar o novo valor caractere por caractere
@@ -345,11 +367,11 @@ def _update_field_with_hardware_input(x: int, y: int, new_value: str) -> bool:
         except Exception as e:
             logger.error(
                 f"Erro ao atualizar campo com hardware (tentativa {attempt}/{max_attempts}): {e}",
-                exc_info=True
+                exc_info=True,
             )
 
             if attempt < max_attempts:
-                logger.info(f"Repetindo operação de atualização do campo...")
+                logger.info("Repetindo operação de atualização do campo...")
                 time.sleep(0.5)  # Aguardar antes de tentar novamente
             else:
                 logger.error(
@@ -358,6 +380,7 @@ def _update_field_with_hardware_input(x: int, y: int, new_value: str) -> bool:
                 return False
 
     return False
+
 
 def _find_save_button_coordinates(driver) -> dict | None:
     """
@@ -418,11 +441,13 @@ def _find_save_button_coordinates(driver) -> dict | None:
 
     try:
         result = driver.execute_script(script)
-        if result and 'x' in result and 'y' in result:
+        if result and "x" in result and "y" in result:
             logger.info(f"Botão de salvar encontrado em ({result['x']}, {result['y']})")
-            return {"x": result['x'], "y": result['y']}
+            return {"x": result["x"], "y": result["y"]}
 
-        logger.error("Botão de salvar não encontrado. Procurado por textos: ['Salvar alterações', 'Save changes']")
+        logger.error(
+            "Botão de salvar não encontrado. Procurado por textos: ['Salvar alterações', 'Save changes']"
+        )
         return None
 
     except Exception as e:
@@ -430,46 +455,47 @@ def _find_save_button_coordinates(driver) -> dict | None:
         return None
 
 
-
 def _click_with_physical_mouse(driver, x: int, y: int) -> bool:
     """
     Simula clique físico usando pyautogui (força isTrusted=true).
-    
+
     Args:
         driver: WebDriver do Selenium
         x: Coordenada X na tela
         y: Coordenada Y na tela
-    
+
     Returns:
         True se sucesso, False se falhar
     """
     try:
         import pyautogui
-        
+
         # Obter posição da janela do navegador
-        window_pos = driver.execute_script("""
+        window_pos = driver.execute_script(
+            """
             return {
                 x: window.screenX,
                 y: window.screenY
             };
-        """)
-        
+        """
+        )
+
         # Calcular posição absoluta na tela
-        screen_x = window_pos['x'] + x
-        screen_y = window_pos['y'] + y
-        
+        screen_x = window_pos["x"] + x
+        screen_y = window_pos["y"] + y
+
         logger.info(f"Movendo mouse físico para ({screen_x}, {screen_y})")
-        
+
         # Mover mouse suavemente (mais humano)
         pyautogui.moveTo(screen_x, screen_y, duration=0.3)
         time.sleep(0.1)
-        
+
         # Clicar
         pyautogui.click()
         logger.info("Clique físico executado")
-        
+
         return True
-        
+
     except ImportError:
         logger.warning("pyautogui não instalado. Instale com: pip install pyautogui")
         return False
@@ -541,9 +567,7 @@ def update_delivery_email_hardware(driver, new_email: str, timeout: int = 10) ->
         # 2. Atualizar o campo usando hardware
         logger.info("Passo 2: Atualizando campo com entrada de hardware...")
         update_success = _update_field_with_hardware_input(
-            field_coords['x'],
-            field_coords['y'],
-            new_email
+            field_coords["x"], field_coords["y"], new_email
         )
 
         if not update_success:
@@ -618,9 +642,7 @@ def update_delivery_email_hardware(driver, new_email: str, timeout: int = 10) ->
         # 5. Clicar no botão de salvar usando mouse físico
         logger.info("Passo 5: Clicando no botão de salvar com mouse físico...")
         click_success = _click_with_physical_mouse(
-            driver,
-            save_button_coords['x'],
-            save_button_coords['y']
+            driver, save_button_coords["x"], save_button_coords["y"]
         )
 
         if not click_success:
@@ -635,44 +657,44 @@ def update_delivery_email_hardware(driver, new_email: str, timeout: int = 10) ->
         return True
 
     except Exception as e:
-        logger.error(
-            f"Erro durante atualização de email de entrega: {e}",
-            exc_info=True
-        )
+        logger.error(f"Erro durante atualização de email de entrega: {e}", exc_info=True)
         return False
-
 
 
 def _force_dom_refresh(driver) -> None:
     """
     Força refresh do DOM após 2FA para evitar "estado de choque".
     Usa scroll suave em vez de refresh completo (mais rápido).
-    
+
     Args:
         driver: WebDriver do Selenium
     """
     try:
         logger.info("Forçando refresh do DOM...")
-        
+
         # Scroll suave para baixo e volta (força re-render)
-        driver.execute_script("""
+        driver.execute_script(
+            """
             window.scrollTo({
                 top: 300,
                 behavior: 'smooth'
             });
-        """)
+        """
+        )
         time.sleep(0.5)
-        
-        driver.execute_script("""
+
+        driver.execute_script(
+            """
             window.scrollTo({
                 top: 0,
                 behavior: 'smooth'
             });
-        """)
+        """
+        )
         time.sleep(0.5)
-        
+
         logger.info("DOM refreshed")
-        
+
     except Exception as e:
         logger.warning(f"Erro ao refresh DOM: {e}")
 
@@ -680,10 +702,10 @@ def _force_dom_refresh(driver) -> None:
 def _detect_honeypot_overlay(driver) -> bool:
     """
     Detecta se há overlay invisível cobrindo a página (honeypot).
-    
+
     Args:
         driver: WebDriver do Selenium
-    
+
     Returns:
         True se overlay detectado, False caso contrário
     """
@@ -696,7 +718,7 @@ def _detect_honeypot_overlay(driver) -> bool:
         let opacity = parseFloat(style.opacity);
         let display = style.display;
         let visibility = style.visibility;
-        
+
         // Overlay suspeito: z-index alto + (opacity baixa OU visibility hidden)
         if (zIndex > 1000 && (opacity < 0.1 || visibility === 'hidden')) {
             let rect = el.getBoundingClientRect();
@@ -714,7 +736,7 @@ def _detect_honeypot_overlay(driver) -> bool:
     }
     return {detected: false};
     """
-    
+
     try:
         result = driver.execute_script(script)
         if result.get("detected"):
@@ -729,27 +751,27 @@ def _detect_honeypot_overlay(driver) -> bool:
 def _click_element_anti_honeypot(driver, element_text: str, wait_obj, tag: str = "a") -> bool:
     """
     Técnica de Visão Híbrida para clicar em elementos evitando honeypots.
-    
+
     Estratégia em 3 camadas:
     1. Tentar Selenium normal (wait_click)
     2. Se falhar, usar JS (document.evaluate) para encontrar
     3. Se encontrar, usar mouse físico (pyautogui) para clicar
-    
+
     Args:
         driver: WebDriver do Selenium
         element_text: Texto do elemento a clicar
         wait_obj: WebDriverWait object
         tag: Tag HTML (default: 'a')
-    
+
     Returns:
         True se sucesso, False se falhar
     """
+    from selenium.common.exceptions import TimeoutException
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support import expected_conditions as EC
-    from selenium.common.exceptions import TimeoutException
-    
+
     logger.info(f"Tentando clicar em: '{element_text}' (anti-honeypot)")
-    
+
     # Detectar overlay antes de tentar
     if _detect_honeypot_overlay(driver):
         logger.warning("Overlay detectado! Pulando para método JS direto...")
@@ -765,35 +787,35 @@ def _click_element_anti_honeypot(driver, element_text: str, wait_obj, tag: str =
             logger.warning("✗ Selenium timeout - elemento não clicável")
         except Exception as e:
             logger.warning(f"✗ Selenium falhou: {e}")
-    
+
     # Camada 2: Busca via JS
     logger.info("Camada 2: Buscando via document.evaluate (JS)...")
     element_info = _find_element_by_text_js(driver, element_text, tag=tag, case_sensitive=False)
-    
+
     if not element_info:
         logger.error(f"✗ Elemento '{element_text}' não encontrado nem via JS")
         return False
-    
+
     logger.info(f"✓ Elemento encontrado: {element_info}")
-    
+
     # Verificar se está visível
     if not element_info.get("isVisible"):
         logger.warning("⚠ Elemento existe mas não está visível (possível honeypot)")
-    
+
     # Camada 3: Clique físico
     logger.info("Camada 3: Tentando clique físico (pyautogui)...")
-    
+
     # Scroll para elemento se não estiver no viewport
     if not element_info.get("isInViewport"):
         logger.info("Scrollando para elemento...")
         driver.execute_script(f"window.scrollTo(0, {element_info['y'] - 200});")
         time.sleep(0.5)
-    
+
     # Tentar clique físico
-    if _click_with_physical_mouse(driver, int(element_info['x']), int(element_info['y'])):
+    if _click_with_physical_mouse(driver, int(element_info["x"]), int(element_info["y"])):
         logger.info("✓ Clique físico bem-sucedido")
         return True
-    
+
     # Fallback: JS click direto
     logger.info("Fallback: Tentando JS click direto...")
     try:
@@ -803,9 +825,8 @@ def _click_element_anti_honeypot(driver, element_text: str, wait_obj, tag: str =
             return True
     except Exception as e:
         logger.error(f"✗ JS click falhou: {e}")
-    
-    return False
 
+    return False
 
 
 def mark_step_as_complete(step_name: str) -> bool:
@@ -867,12 +888,12 @@ def save_happy_path_state(driver) -> bool:
     try:
         SESSION_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         cookies = driver.get_cookies()
-        local_storage = driver.execute_script(
-            "return Object.assign({}, window.localStorage);"
-        ) or {}
-        session_storage = driver.execute_script(
-            "return Object.assign({}, window.sessionStorage);"
-        ) or {}
+        local_storage = (
+            driver.execute_script("return Object.assign({}, window.localStorage);") or {}
+        )
+        session_storage = (
+            driver.execute_script("return Object.assign({}, window.sessionStorage);") or {}
+        )
         data = {
             "cookies": cookies,
             "localStorage": dict(local_storage),
@@ -880,7 +901,9 @@ def save_happy_path_state(driver) -> bool:
             "url": driver.current_url or "",
             "saved_at": datetime.now().isoformat(),
         }
-        SESSION_CACHE_PATH.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        SESSION_CACHE_PATH.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
         logger.info(f"save_happy_path_state: sessao salva em {SESSION_CACHE_PATH}")
         return True
     except Exception as e:
@@ -917,12 +940,16 @@ def load_session_from_cache(driver) -> bool:
 
         for key, val in (local_storage or {}).items():
             try:
-                driver.execute_script(f"window.localStorage.setItem(arguments[0], arguments[1]);", key, val)
+                driver.execute_script(
+                    "window.localStorage.setItem(arguments[0], arguments[1]);", key, val
+                )
             except Exception:
                 pass
         for key, val in (session_storage or {}).items():
             try:
-                driver.execute_script(f"window.sessionStorage.setItem(arguments[0], arguments[1]);", key, val)
+                driver.execute_script(
+                    "window.sessionStorage.setItem(arguments[0], arguments[1]);", key, val
+                )
             except Exception:
                 pass
 
@@ -989,6 +1016,7 @@ def _kill_process_holding_file(filepath: Path) -> bool:
     """Tenta matar o processo que segura o arquivo via psutil."""
     try:
         import psutil
+
         for proc in psutil.process_iter(["pid", "open_files"]):
             try:
                 for f in proc.open_files() or []:
@@ -1042,12 +1070,15 @@ def _deep_clean_for_profile(user_data_dir: str | None) -> None:
     if not user_data_dir or not Path(user_data_dir).exists():
         return
     import subprocess
+
     for _ in range(2):
         try:
             for proc in ["chrome.exe", "chromedriver.exe"]:
                 subprocess.run(
                     ["taskkill", "/F", "/IM", proc, "/T"],
-                    capture_output=True, text=True, timeout=15,
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
                 )
         except Exception:
             pass
@@ -1071,7 +1102,9 @@ def _verify_profile_ready(profile_path: str | None) -> None:
             "Verifique EXTRACTOR_CHROME_USER_DATA no .env ou crie o diretorio."
         )
     _remove_profile_locks(profile_path)
-    still_locked = [n for n in ["SingletonLock", "Parent.lock", "SingletonSocket"] if (p / n).exists()]
+    still_locked = [
+        n for n in ["SingletonLock", "Parent.lock", "SingletonSocket"] if (p / n).exists()
+    ]
     if still_locked:
         raise ExtractionError(
             f"Perfil bloqueado. Nao foi possivel remover: {', '.join(still_locked)}\n"
@@ -1096,7 +1129,9 @@ def _create_driver_with_options(options, headless: bool):
     return driver
 
 
-def _create_undetected_driver(use_profile_path: str | None, headless: bool, extra_args: list[str] | None = None):
+def _create_undetected_driver(
+    use_profile_path: str | None, headless: bool, extra_args: list[str] | None = None
+):
     """
     Cria driver com undetected-chromedriver (evita deteccao "navegador nao seguro").
     Headless nao e oficialmente suportado; em headless usa driver normal.
@@ -1114,7 +1149,9 @@ def _create_undetected_driver(use_profile_path: str | None, headless: bool, extr
         "(KHTML, like Gecko) Chrome/131.0.6778.200 Safari/537.36"
     )
     opts = uc.ChromeOptions()
-    opts.page_load_strategy = "eager"  # DOM pronto, nao espera recursos (evita travar em paginas lentas)
+    opts.page_load_strategy = (
+        "eager"  # DOM pronto, nao espera recursos (evita travar em paginas lentas)
+    )
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--disable-gpu")
@@ -1128,10 +1165,12 @@ def _create_undetected_driver(use_profile_path: str | None, headless: bool, extr
     if use_profile_path:
         Path(use_profile_path).mkdir(parents=True, exist_ok=True)
         opts.add_argument(f"--user-data-dir={use_profile_path}")
-        opts.add_argument(f"--profile-directory={os.getenv('EXTRACTOR_CHROME_PROFILE', 'Default').strip() or 'Default'}")
+        opts.add_argument(
+            f"--profile-directory={os.getenv('EXTRACTOR_CHROME_PROFILE', 'Default').strip() or 'Default'}"
+        )
         opts.add_argument("--no-first-run")
         opts.add_argument("--no-default-browser-check")
-    for arg in (extra_args or []):
+    for arg in extra_args or []:
         if arg and arg.startswith("--"):
             opts.add_argument(arg)
 
@@ -1181,11 +1220,13 @@ def _bypass_chrome_protections(driver) -> None:
         if driver.window_handles:
             driver.switch_to.window(driver.window_handles[0])
             try:
-                driver.execute_script("""
+                driver.execute_script(
+                    """
                     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
                     window.getSelection && window.getSelection().removeAllRanges();
                     window.location.href = 'about:blank';
-                """)
+                """
+                )
             except Exception:
                 driver.execute_script("window.location.href = 'about:blank';")
             time.sleep(0.5)
@@ -1207,8 +1248,8 @@ def _robust_navigate(driver, url: str, timeout: int = 20, debug: bool = True) ->
     Navega com: (1) driver.get, (2) window.location.replace, (3) Ctrl+L+send_keys.
     Retorna True se navegou com sucesso.
     """
-    from selenium.webdriver.common.keys import Keys
     from selenium.webdriver.common.action_chains import ActionChains
+    from selenium.webdriver.common.keys import Keys
 
     def _print(msg: str):
         if debug:
@@ -1216,10 +1257,16 @@ def _robust_navigate(driver, url: str, timeout: int = 20, debug: bool = True) ->
         logger.info(msg)
 
     driver.set_page_load_timeout(timeout)
-    for attempt, (name, do_nav) in enumerate([
-        ("driver.get", lambda: driver.get(url)),
-        ("location.replace", lambda: driver.execute_script(f"window.location.replace('{url}');")),
-    ], 1):
+    for attempt, (name, do_nav) in enumerate(
+        [
+            ("driver.get", lambda: driver.get(url)),
+            (
+                "location.replace",
+                lambda: driver.execute_script(f"window.location.replace('{url}');"),
+            ),
+        ],
+        1,
+    ):
         try:
             _print(f"Tentativa {attempt}: {name}...")
             do_nav()
@@ -1278,8 +1325,8 @@ def _random_click_on_page(driver) -> None:
     Chamar apos cada navegacao para nova pagina.
     """
     try:
-        from selenium.webdriver.common.by import By
         from selenium.webdriver.common.action_chains import ActionChains
+        from selenium.webdriver.common.by import By
 
         body = driver.find_element(By.TAG_NAME, "body")
         w = max(100, body.size.get("width", 800))
@@ -1306,12 +1353,14 @@ def _trigger_chrome_ai_panel(driver) -> bool:
     Para capturar texto da IA: use pyautogui + OCR ou Accessibility Tree (CDP).
     """
     try:
-        from selenium.webdriver.common.keys import Keys
         from selenium.webdriver.common.action_chains import ActionChains
+        from selenium.webdriver.common.keys import Keys
 
         # Tática A: Atalhos de teclado (Chrome 3.14+ pode usar Ctrl+Shift+L ou similar)
         ac = ActionChains(driver)
-        ac.key_down(Keys.CONTROL).key_down(Keys.SHIFT).send_keys("l").key_up(Keys.SHIFT).key_up(Keys.CONTROL).perform()
+        ac.key_down(Keys.CONTROL).key_down(Keys.SHIFT).send_keys("l").key_up(Keys.SHIFT).key_up(
+            Keys.CONTROL
+        ).perform()
         time.sleep(1)
         logger.info("Atalho Ctrl+Shift+L enviado para painel IA")
         return True
@@ -1350,8 +1399,12 @@ def _screenshot_desktop_for_ai_panel() -> str | None:
     """
     try:
         import pyautogui
-        from pathlib import Path
-        path = PROJECT_ROOT / "logs" / f"desktop_ai_panel_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+
+        path = (
+            PROJECT_ROOT
+            / "logs"
+            / f"desktop_ai_panel_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        )
         path.parent.mkdir(parents=True, exist_ok=True)
         pyautogui.screenshot(str(path))
         logger.info(f"Screenshot desktop salvo: {path}")
@@ -1384,9 +1437,8 @@ def _get_driver(
     """
     logger.info(f"Inicializando WebDriver (headless={headless})...")
 
-    from selenium import webdriver
-    from selenium.webdriver.chrome.options import Options
     from selenium.common.exceptions import SessionNotCreatedException
+    from selenium.webdriver.chrome.options import Options
 
     # Blindagem de Sigilo: User-Agent de Chrome real (evita deteccao headless)
     _REAL_CHROME_UA = (
@@ -1394,7 +1446,9 @@ def _get_driver(
         "(KHTML, like Gecko) Chrome/131.0.6778.200 Safari/537.36"
     )
 
-    def _build_options(use_profile_path: str | None, extra_args: list[str] | None = None) -> Options:
+    def _build_options(
+        use_profile_path: str | None, extra_args: list[str] | None = None
+    ) -> Options:
         opts = Options()
         opts.page_load_strategy = "eager"  # DOM pronto, evita travar em paginas lentas
         if headless:
@@ -1427,10 +1481,12 @@ def _get_driver(
         if not headless and use_profile_path:
             Path(use_profile_path).mkdir(parents=True, exist_ok=True)
             opts.add_argument(f"--user-data-dir={use_profile_path}")
-            opts.add_argument(f"--profile-directory={os.getenv('EXTRACTOR_CHROME_PROFILE', 'Default').strip() or 'Default'}")
+            opts.add_argument(
+                f"--profile-directory={os.getenv('EXTRACTOR_CHROME_PROFILE', 'Default').strip() or 'Default'}"
+            )
             opts.add_argument("--no-first-run")
             opts.add_argument("--no-default-browser-check")
-        for arg in (extra_args or []):
+        for arg in extra_args or []:
             if arg and arg.startswith("--"):
                 opts.add_argument(arg)
         return opts
@@ -1477,7 +1533,12 @@ def _get_driver(
                     headless,
                     extra_args=extra_args,
                 )
-            except (SessionNotCreatedException, WebDriverException, OSError, ConnectionError) as uc_err:
+            except (
+                SessionNotCreatedException,
+                WebDriverException,
+                OSError,
+                ConnectionError,
+            ) as uc_err:
                 logger.warning(f"Undetected falhou: {uc_err}. Tentando Selenium padrao...")
                 options = _build_options(profile_to_try if not headless else None, extra_args)
                 driver = _create_driver_with_options(options, headless)
@@ -1488,17 +1549,23 @@ def _get_driver(
         return driver
     except (SessionNotCreatedException, WebDriverException, OSError, ConnectionError) as e:
         err_lower = str(e).lower()
-        if user_profile and use_fallback and (
-            "chrome instance exited" in err_lower
-            or "devtoolsactiveport" in err_lower
-            or "session not created" in err_lower
+        if (
+            user_profile
+            and use_fallback
+            and (
+                "chrome instance exited" in err_lower
+                or "devtoolsactiveport" in err_lower
+                or "session not created" in err_lower
+            )
         ):
             fallback_profile = temp_profile_dir
             Path(fallback_profile).mkdir(parents=True, exist_ok=True)
             logger.warning(f"Perfil real falhou ({e}). Iniciando perfil de fallback...")
             print("  >> Perfil real travado, iniciando Perfil de Fallback...", flush=True)
             if use_undetected:
-                driver = _create_undetected_driver(fallback_profile if not headless else None, headless, extra_args=extra_args)
+                driver = _create_undetected_driver(
+                    fallback_profile if not headless else None, headless, extra_args=extra_args
+                )
             else:
                 options = _build_options(fallback_profile if not headless else None, extra_args)
                 driver = _create_driver_with_options(options, headless)
@@ -1812,9 +1879,7 @@ def extract_api_key(
                 raise
 
         # Etapa 5: Salvar em arquivo e opcionalmente no .env/Supabase
-        out_path = _save_api_key(
-            key, platform, update_env=True, save_to_supabase=save_to_supabase
-        )
+        out_path = _save_api_key(key, platform, update_env=True, save_to_supabase=save_to_supabase)
         logger.info(f"API key extraída e salva em: {out_path}")
 
         return key
@@ -1853,6 +1918,7 @@ def execute_identity_swap(
     Returns:
         API key extraida ou None se falhar
     """
+
     def _log(msg: str):
         if debug:
             print(f"  [identity_swap] {msg}", flush=True)
@@ -1884,7 +1950,10 @@ def execute_identity_swap(
 
     # Checkpoint: se google_login completo nas últimas 24h, pular login
     if is_step_recently_complete("google_login"):
-        print("  >> Checkpoint válido (<24h). Pulando etapa de login e indo direto para Groups.", flush=True)
+        print(
+            "  >> Checkpoint válido (<24h). Pulando etapa de login e indo direto para Groups.",
+            flush=True,
+        )
         logger.info("Checkpoint google_login válido. Pulando login.")
         try:
             driver.get(all_groups_url)
@@ -1893,7 +1962,10 @@ def execute_identity_swap(
             driver.execute_script(f"window.location.href = '{all_groups_url}';")
         time.sleep(2)
     elif load_session_from_cache(driver):
-        print("  >> Happy Path detectado. Pulando desafio de 2FA e indo direto para a missão.", flush=True)
+        print(
+            "  >> Happy Path detectado. Pulando desafio de 2FA e indo direto para a missão.",
+            flush=True,
+        )
         logger.info("Happy Path detectado. Pulando desafio de 2FA.")
         mark_step_as_complete("google_login")
     else:
@@ -1902,8 +1974,12 @@ def execute_identity_swap(
 
     # --- Fluxo Cliques Burros: 6 passos com WebDriverWait element_to_be_clickable ---
     wait_click = WebDriverWait(driver, 20)
-    google_user = os.getenv("EXTRACTOR_GOOGLE_USER", "").strip() or os.getenv("EXTRACTOR_USER", "").strip()
-    google_pass = os.getenv("EXTRACTOR_GOOGLE_PASS", "").strip() or os.getenv("EXTRACTOR_PASS", "").strip()
+    google_user = (
+        os.getenv("EXTRACTOR_GOOGLE_USER", "").strip() or os.getenv("EXTRACTOR_USER", "").strip()
+    )
+    google_pass = (
+        os.getenv("EXTRACTOR_GOOGLE_PASS", "").strip() or os.getenv("EXTRACTOR_PASS", "").strip()
+    )
 
     # Passo 1: Entrada - Navegar para all-groups (ou garantir que estamos la)
     _log("Passo 1: Navegando para all-groups...")
@@ -1917,7 +1993,8 @@ def execute_identity_swap(
     time.sleep(4)
 
     # DETECÇÃO PRECOCE: solve_oauth_flow ANTES de qualquer click()
-    from src.utils.evolutionary_orchestrator import solve_oauth_flow, _is_oauth_login_screen
+    from src.utils.evolutionary_orchestrator import _is_oauth_login_screen, solve_oauth_flow
+
     if _is_oauth_login_screen(driver) and solve_oauth_flow(driver):
         print("  >> OAuth quebrado pelo Agente (JS puro). Prosseguindo...", flush=True)
         mark_step_as_complete("google_login")
@@ -1929,8 +2006,19 @@ def execute_identity_swap(
         page_lower = driver.page_source.lower()
 
         # Login classico apenas se Agente nao resolveu (fallback)
-        if "access-error" in page_lower or "accounts.google.com" in current_url or "entrar" in page_lower or "sign in" in page_lower or "iniciar sess" in page_lower or "identifique-se" in page_lower or "fazer login" in page_lower:
-            print("  >> Pagina de login detectada (Agente nao resolveu). Tentando login classico...", flush=True)
+        if (
+            "access-error" in page_lower
+            or "accounts.google.com" in current_url
+            or "entrar" in page_lower
+            or "sign in" in page_lower
+            or "iniciar sess" in page_lower
+            or "identifique-se" in page_lower
+            or "fazer login" in page_lower
+        ):
+            print(
+                "  >> Pagina de login detectada (Agente nao resolveu). Tentando login classico...",
+                flush=True,
+            )
             if google_user and google_pass:
                 try:
                     # Ir direto ao login (access-error nao tem botao Fazer Login)
@@ -1939,29 +2027,58 @@ def execute_identity_swap(
                     _random_click_on_page(driver)
                     # Trocar conta se AccountChooser aparecer (timeout curto para nao travar)
                     wait_quick = WebDriverWait(driver, 3)
-                    for link_text in ["Use another account", "Usar outra conta", "Add account", "Adicionar conta"]:
+                    for link_text in [
+                        "Use another account",
+                        "Usar outra conta",
+                        "Add account",
+                        "Adicionar conta",
+                    ]:
                         try:
-                            btn = wait_quick.until(EC.element_to_be_clickable((By.PARTIAL_LINK_TEXT, link_text)))
+                            btn = wait_quick.until(
+                                EC.element_to_be_clickable((By.PARTIAL_LINK_TEXT, link_text))
+                            )
                             btn.click()
                             time.sleep(2)
                             break
                         except TimeoutException:
                             continue
-                    email_inp = wait_click.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[type='email'], input[name='identifier']")))
+                    email_inp = wait_click.until(
+                        EC.element_to_be_clickable(
+                            (By.CSS_SELECTOR, "input[type='email'], input[name='identifier']")
+                        )
+                    )
                     email_inp.clear()
                     email_inp.send_keys(google_user)
                     time.sleep(1)
-                    next_btn = wait_click.until(EC.element_to_be_clickable((By.XPATH, "//span[text()='Next']/.. | //span[text()='Avançar']/.. | //button[contains(., 'Next')] | //div[@role='button'][contains(., 'Avançar')]")))
+                    next_btn = wait_click.until(
+                        EC.element_to_be_clickable(
+                            (
+                                By.XPATH,
+                                "//span[text()='Next']/.. | //span[text()='Avançar']/.. | //button[contains(., 'Next')] | //div[@role='button'][contains(., 'Avançar')]",
+                            )
+                        )
+                    )
                     try:
                         next_btn.click()
                     except Exception:
                         driver.execute_script("arguments[0].click();", next_btn)
                     time.sleep(3)
-                    pass_inp = wait_click.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[type='password'], input[name='password']")))
+                    pass_inp = wait_click.until(
+                        EC.element_to_be_clickable(
+                            (By.CSS_SELECTOR, "input[type='password'], input[name='password']")
+                        )
+                    )
                     pass_inp.clear()
                     pass_inp.send_keys(google_pass)
                     time.sleep(1)
-                    next_btn = wait_click.until(EC.element_to_be_clickable((By.XPATH, "//span[text()='Next']/.. | //span[text()='Avançar']/.. | //button[contains(., 'Next')]")))
+                    next_btn = wait_click.until(
+                        EC.element_to_be_clickable(
+                            (
+                                By.XPATH,
+                                "//span[text()='Next']/.. | //span[text()='Avançar']/.. | //button[contains(., 'Next')]",
+                            )
+                        )
+                    )
                     try:
                         next_btn.click()
                     except Exception:
@@ -1973,13 +2090,22 @@ def execute_identity_swap(
                         driver.execute_script(f"window.location.href = '{all_groups_url}';")
                     time.sleep(4)
                     _random_click_on_page(driver)
-                    print("  >> Login realizado. Cookies salvos no perfil para proximas rodadas.", flush=True)
+                    print(
+                        "  >> Login realizado. Cookies salvos no perfil para proximas rodadas.",
+                        flush=True,
+                    )
                     mark_step_as_complete("google_login")
                 except (TimeoutException, NoSuchElementException) as e:
-                    print(f"  >> [AVISO] Login automatico falhou: {e}. Faca login manualmente.", flush=True)
+                    print(
+                        f"  >> [AVISO] Login automatico falhou: {e}. Faca login manualmente.",
+                        flush=True,
+                    )
                     time.sleep(15)
             else:
-                print("  >> Configure EXTRACTOR_GOOGLE_USER e EXTRACTOR_GOOGLE_PASS no .env. Aguardando 30s para login manual...", flush=True)
+                print(
+                    "  >> Configure EXTRACTOR_GOOGLE_USER e EXTRACTOR_GOOGLE_PASS no .env. Aguardando 30s para login manual...",
+                    flush=True,
+                )
                 time.sleep(30)
 
     if expected_email and expected_email.lower() in driver.page_source.lower():
@@ -1989,10 +2115,10 @@ def execute_identity_swap(
     group_entered = False
     if group_name:
         print(f"  [2/6] Clicando no grupo: {group_name} (modo anti-honeypot)", flush=True)
-        
+
         # NOVO: Forçar refresh do DOM após 2FA
         _force_dom_refresh(driver)
-        
+
         # NOVO: Usar técnica de Visão Híbrida
         if _click_element_anti_honeypot(driver, group_name, wait_click, tag="a"):
             print(f"  >> ✓ Grupo acessado com sucesso: {group_name}", flush=True)
@@ -2007,15 +2133,18 @@ def execute_identity_swap(
                     print(f"  >> ✓ Grupo acessado (palavra parcial): {first_word}", flush=True)
                     time.sleep(4)
                     group_entered = True
-        
+
         # Se ainda não entrou, tentar métodos legados
         if not group_entered:
             print("  >> Tentando métodos legados...", flush=True)
             try:
                 # XPath com ActionChains
-                for el in driver.find_elements(By.XPATH, "//a[contains(@href, 'groups.google.com/g/')]"):
+                for el in driver.find_elements(
+                    By.XPATH, "//a[contains(@href, 'groups.google.com/g/')]"
+                ):
                     if group_name.split()[0].lower() in (el.text or "").lower():
                         from selenium.webdriver.common.action_chains import ActionChains
+
                         ActionChains(driver).move_to_element(el).click().perform()
                         print(f"  >> ✓ Grupo acessado (XPath): {group_name}", flush=True)
                         time.sleep(4)
@@ -2023,16 +2152,20 @@ def execute_identity_swap(
                         break
             except Exception as e:
                 logger.warning(f"XPath fallback falhou: {e}")
-            
+
             # Estratégia de Busca Difusa
             if not group_entered:
-                parts = [group_name.split()[0], group_name.split()[-1] if " " in group_name else group_name[:8]]
+                parts = [
+                    group_name.split()[0],
+                    group_name.split()[-1] if " " in group_name else group_name[:8],
+                ]
                 for part in parts:
                     if not part or len(part) < 2:
                         continue
                     try:
                         el = driver.find_element(By.XPATH, f"//a[contains(text(), '{part}')]")
                         from selenium.webdriver.common.action_chains import ActionChains
+
                         ActionChains(driver).move_to_element(el).click().perform()
                         print(f"  >> ✓ Grupo acessado (Busca Difusa): {part}", flush=True)
                         time.sleep(4)
@@ -2040,20 +2173,23 @@ def execute_identity_swap(
                         break
                     except NoSuchElementException:
                         continue
-                
+
                 # CSS lista
                 if not group_entered:
-                    for el in driver.find_elements(By.CSS_SELECTOR, "[role='listitem'] a, .group-list a, a[href*='groups.google.com/g/']"):
+                    for el in driver.find_elements(
+                        By.CSS_SELECTOR,
+                        "[role='listitem'] a, .group-list a, a[href*='groups.google.com/g/']",
+                    ):
                         if any(p.lower() in (el.text or "").lower() for p in parts if p):
                             el.click()
-                            print(f"  >> ✓ Grupo acessado (CSS lista)", flush=True)
+                            print("  >> ✓ Grupo acessado (CSS lista)", flush=True)
                             time.sleep(4)
                             group_entered = True
                             break
-        
+
         # Fallback final: URL direta
         if not group_entered and group_url:
-            print(f"  >> Fallback final: navegando para URL direta", flush=True)
+            print("  >> Fallback final: navegando para URL direta", flush=True)
             try:
                 driver.get(group_url)
                 time.sleep(4)
@@ -2062,13 +2198,12 @@ def execute_identity_swap(
                     print(f"  >> ✓ Grupo acessado por URL: {group_url}", flush=True)
             except Exception as e:
                 logger.warning(f"URL fallback falhou: {e}")
-        
+
         # Se ainda não entrou, reportar erro detalhado
         if not group_entered:
             # Capturar informações de diagnóstico
-            page_source_sample = driver.page_source[:500] if driver.page_source else "N/A"
             current_url = driver.current_url or "N/A"
-            
+
             msg = (
                 f"Guerreiro, o caminho mudou? Não achei o grupo '{group_name}'.\n"
                 f"  URL atual: {current_url}\n"
@@ -2080,7 +2215,7 @@ def execute_identity_swap(
                 f"  Diagnóstico: Verifique screenshot em logs/"
             )
             print(f"\n  >> [BLOQUEIO ANTI-HONEYPOT] {msg}", flush=True)
-            
+
             # Salvar screenshot para diagnóstico
             try:
                 screenshot_path = PROJECT_ROOT / "logs" / f"honeypot_debug_{int(time.time())}.png"
@@ -2089,7 +2224,7 @@ def execute_identity_swap(
                 print(f"  >> Screenshot salvo: {screenshot_path}", flush=True)
             except Exception:
                 pass
-            
+
             raise ExtractionError(f"Grupo '{group_name}' não encontrado (possível honeypot). {msg}")
 
     # Passo 3: Configuracao - Clicar em engrenagem ou "Configurações do grupo"
@@ -2101,14 +2236,32 @@ def execute_identity_swap(
             (By.PARTIAL_LINK_TEXT, "Definições do grupo"),
             (By.PARTIAL_LINK_TEXT, "Configurações do grupo"),
             (By.PARTIAL_LINK_TEXT, "Group settings"),
-            (By.XPATH, "//*[@role='main']//a[contains(., 'Definições do grupo') or contains(., 'Configurações do grupo') or contains(., 'Group settings')]"),
-            (By.XPATH, "//*[@role='main']//*[contains(@aria-label, 'Configurações') or contains(@aria-label, 'Group settings')]"),
-            (By.XPATH, "//*[@role='main']//a[contains(., 'Definições') or contains(., 'Configurações') or contains(., 'Settings')]"),
-            (By.XPATH, "//*[@role='main']//*[contains(@aria-label, 'Configura') or contains(@aria-label, 'Settings')]"),
+            (
+                By.XPATH,
+                "//*[@role='main']//a[contains(., 'Definições do grupo') or contains(., 'Configurações do grupo') or contains(., 'Group settings')]",
+            ),
+            (
+                By.XPATH,
+                "//*[@role='main']//*[contains(@aria-label, 'Configurações') or contains(@aria-label, 'Group settings')]",
+            ),
+            (
+                By.XPATH,
+                "//*[@role='main']//a[contains(., 'Definições') or contains(., 'Configurações') or contains(., 'Settings')]",
+            ),
+            (
+                By.XPATH,
+                "//*[@role='main']//*[contains(@aria-label, 'Configura') or contains(@aria-label, 'Settings')]",
+            ),
             (By.PARTIAL_LINK_TEXT, "Definições"),
             (By.PARTIAL_LINK_TEXT, "Settings"),
-            (By.CSS_SELECTOR, "[aria-label*='Configura'], [aria-label*='Settings'], [title*='Configura']"),
-            (By.XPATH, "//a[contains(., 'Definições') or contains(., 'Configura') or contains(., 'Settings')]"),
+            (
+                By.CSS_SELECTOR,
+                "[aria-label*='Configura'], [aria-label*='Settings'], [title*='Configura']",
+            ),
+            (
+                By.XPATH,
+                "//a[contains(., 'Definições') or contains(., 'Configura') or contains(., 'Settings')]",
+            ),
         ]:
             try:
                 el = wait_click.until(EC.element_to_be_clickable((by, sel)))
@@ -2144,15 +2297,28 @@ def execute_identity_swap(
         # Passo 5: Troca de Email - Localizar campo, limpar, digitar novo
         print("  [5/6] Localizando campo Email do grupo, limpando e digitando novo", flush=True)
         for by, sel in [
-            (By.XPATH, "//input[contains(@aria-label, 'Email') or contains(@placeholder, 'Email')]"),
+            (
+                By.XPATH,
+                "//input[contains(@aria-label, 'Email') or contains(@placeholder, 'Email')]",
+            ),
             (By.XPATH, "//*[contains(text(), 'Email do grupo')]/following::input[1]"),
             (By.CSS_SELECTOR, "input[type='text']"),
         ]:
             try:
-                inputs = driver.find_elements(by, sel) if by == By.CSS_SELECTOR else [driver.find_element(by, sel)]
+                inputs = (
+                    driver.find_elements(by, sel)
+                    if by == By.CSS_SELECTOR
+                    else [driver.find_element(by, sel)]
+                )
                 for inp in inputs:
                     val = (inp.get_attribute("value") or "").strip()
-                    if inp.is_displayed() and val and "@" not in val and " " not in val and len(val) < 50:
+                    if (
+                        inp.is_displayed()
+                        and val
+                        and "@" not in val
+                        and " " not in val
+                        and len(val) < 50
+                    ):
                         old_group_email = val
                         inp.clear()
                         inp.send_keys(new_group_email)
@@ -2300,7 +2466,9 @@ def execute_identity_swap(
 
     # Autorizar se necessario
     try:
-        auth_btn = driver.find_element(By.XPATH, "//*[contains(., 'Authorize') or contains(., 'Autorizar')]")
+        auth_btn = driver.find_element(
+            By.XPATH, "//*[contains(., 'Authorize') or contains(., 'Autorizar')]"
+        )
         if auth_btn.is_displayed():
             auth_btn.click()
             time.sleep(3)
@@ -2393,7 +2561,10 @@ def _run_rotating_identity_groq(driver, validate: bool = True) -> str:
         email_input_selectors = [
             (By.CSS_SELECTOR, "input[type='email']"),
             (By.CSS_SELECTOR, "input[name*='email']"),
-            (By.XPATH, "//input[contains(@placeholder, 'email') or contains(@aria-label, 'email')]"),
+            (
+                By.XPATH,
+                "//input[contains(@placeholder, 'email') or contains(@aria-label, 'email')]",
+            ),
         ]
         for by, sel in email_input_selectors:
             try:
@@ -2404,7 +2575,9 @@ def _run_rotating_identity_groq(driver, validate: bool = True) -> str:
                     logger.info(f"Email de encaminhamento alterado para: {new_email}")
                     time.sleep(2)
                     # Salvar
-                    for btn in driver.find_elements(By.XPATH, "//button[contains(., 'Salvar') or contains(., 'Save')]"):
+                    for btn in driver.find_elements(
+                        By.XPATH, "//button[contains(., 'Salvar') or contains(., 'Save')]"
+                    ):
                         if btn.is_displayed():
                             btn.click()
                             break
@@ -2450,7 +2623,10 @@ def _run_rotating_identity_groq(driver, validate: bool = True) -> str:
 
         # Dentro do email: clica no link de confirmacao
         link_selectors = [
-            (By.XPATH, "//a[contains(@href, 'http') and (contains(., 'confirm') or contains(., 'verif') or contains(., 'valid') or contains(@href, 'github') or contains(@href, 'groq'))]"),
+            (
+                By.XPATH,
+                "//a[contains(@href, 'http') and (contains(., 'confirm') or contains(., 'verif') or contains(., 'valid') or contains(@href, 'github') or contains(@href, 'groq'))]",
+            ),
             (By.CSS_SELECTOR, "a[href^='http']"),
         ]
         for by, sel in link_selectors:
@@ -2458,7 +2634,10 @@ def _run_rotating_identity_groq(driver, validate: bool = True) -> str:
                 links = driver.find_elements(by, sel)
                 for link in links:
                     href = link.get_attribute("href") or ""
-                    if any(x in href.lower() for x in ["confirm", "verif", "valid", "github", "groq", "authorize"]):
+                    if any(
+                        x in href.lower()
+                        for x in ["confirm", "verif", "valid", "github", "groq", "authorize"]
+                    ):
                         link.click()
                         logger.info("Clicou no link de confirmacao")
                         break
@@ -2518,7 +2697,9 @@ def _run_rotating_identity_groq(driver, validate: bool = True) -> str:
 
     # Autorizacao OAuth - clicar em Authorize se aparecer
     try:
-        auth_btn = driver.find_element(By.XPATH, "//*[contains(., 'Authorize') or contains(., 'Autorizar')]")
+        auth_btn = driver.find_element(
+            By.XPATH, "//*[contains(., 'Authorize') or contains(., 'Autorizar')]"
+        )
         if auth_btn.is_displayed():
             auth_btn.click()
             time.sleep(3)
@@ -2534,7 +2715,10 @@ def _run_rotating_identity_groq(driver, validate: bool = True) -> str:
 
     # Gerar nova chave se botao existir
     try:
-        create_btn = driver.find_element(By.XPATH, "//*[contains(., 'Create') or contains(., 'Criar') or contains(., 'Generate') or contains(., 'Add')]")
+        create_btn = driver.find_element(
+            By.XPATH,
+            "//*[contains(., 'Create') or contains(., 'Criar') or contains(., 'Generate') or contains(., 'Add')]",
+        )
         if create_btn.is_displayed():
             create_btn.click()
             time.sleep(2)
@@ -2681,9 +2865,13 @@ def run_groq_rotation(
         Nova API key extraida e salva no .env
     """
     if use_rotating_identity is None:
-        use_rotating_identity = os.getenv("EXTRACTOR_USE_ROTATING_IDENTITY", "false").strip().lower() == "true"
+        use_rotating_identity = (
+            os.getenv("EXTRACTOR_USE_ROTATING_IDENTITY", "false").strip().lower() == "true"
+        )
     if use_identity_jump is None:
-        use_identity_jump = os.getenv("EXTRACTOR_USE_IDENTITY_JUMP", "true").strip().lower() == "true"
+        use_identity_jump = (
+            os.getenv("EXTRACTOR_USE_IDENTITY_JUMP", "true").strip().lower() == "true"
+        )
 
     if use_rotating_identity:
         driver = None
@@ -2723,30 +2911,24 @@ def main():
     """Ponto de entrada via linha de comando."""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Extrai API Key de plataforma web via Selenium"
-    )
+    parser = argparse.ArgumentParser(description="Extrai API Key de plataforma web via Selenium")
     parser.add_argument("--url", help="URL da plataforma")
-    parser.add_argument(
-        "--manual", action="store_true", help="Aguardar login manual (OAuth)"
-    )
+    parser.add_argument("--manual", action="store_true", help="Aguardar login manual (OAuth)")
     parser.add_argument("--no-headless", action="store_true", help="Mostrar o navegador")
     parser.add_argument("--wait", type=int, default=60, help="Segundos para login manual")
-    parser.add_argument(
-        "--platform", choices=["groq", "openai"], default="groq", help="Plataforma"
-    )
+    parser.add_argument("--platform", choices=["groq", "openai"], default="groq", help="Plataforma")
     parser.add_argument(
         "--no-validate", action="store_true", help="Não validar chave após extração"
     )
+    parser.add_argument("--supabase", action="store_true", help="Salvar no Supabase")
     parser.add_argument(
-        "--supabase", action="store_true", help="Salvar no Supabase"
-    )
-    parser.add_argument(
-        "--no-identity-jump", action="store_true",
+        "--no-identity-jump",
+        action="store_true",
         help="Usar fluxo manual em vez de Saltos de Identidade",
     )
     parser.add_argument(
-        "--rotating-identity", action="store_true",
+        "--rotating-identity",
+        action="store_true",
         help="Usar fluxo Identidade Rotativa (Google Groups->Gmail->GitHub->Groq)",
     )
     args = parser.parse_args()

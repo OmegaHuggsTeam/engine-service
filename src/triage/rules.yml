@@ -1,0 +1,170 @@
+# Triage Rules — Domain Router (Layer 1)
+# Cada dominio tem keywords, patterns regex e configuracao de confianca.
+# Confidence >= 0.7 = roteia direto | < 0.7 = escala pra Layer 2 (RAG)
+
+domains:
+  audience:
+    description: "Contatos, segmentos, feature engineering"
+    keywords:
+      - contato
+      - contatos
+      - segmento
+      - segmentos
+      - lead
+      - leads
+      - lista
+      - audiencia
+      - publico
+      - grupo
+      - filtro
+      - importar
+      - exportar
+    patterns:
+      - "quantos? contatos?"
+      - "segmento .+"
+      - "criar (lista|segmento|grupo)"
+      - "importar (contatos|leads)"
+    confidence_per_match: 0.25
+    max_confidence: 0.95
+
+  scoring:
+    description: "ML scoring, churn, LTV, XGBoost, SHAP"
+    keywords:
+      - score
+      - scoring
+      - churn
+      - ltv
+      - lifetime
+      - previsao
+      - predicao
+      - modelo
+      - xgboost
+      - shap
+      - probabilidade
+      - risco
+    patterns:
+      - "score de .+"
+      - "probabilidade de .+"
+      - "prever .+"
+      - "modelo de .+"
+    confidence_per_match: 0.3
+    max_confidence: 0.95
+
+  journey:
+    description: "Jornadas AI, DAG, automacao"
+    keywords:
+      - jornada
+      - jornadas
+      - journey
+      - fluxo
+      - automacao
+      - workflow
+      - etapa
+      - trigger
+      - condicao
+      - split
+      - espera
+      - wait
+    patterns:
+      - "criar jornada .+"
+      - "status da jornada .+"
+      - "ativar jornada .+"
+      - "pausar jornada .+"
+    confidence_per_match: 0.25
+    max_confidence: 0.95
+
+  identity:
+    description: "Auth, JWT, RBAC, usuarios, empresas"
+    keywords:
+      - usuario
+      - usuarios
+      - login
+      - autenticacao
+      - permissao
+      - role
+      - empresa
+      - tenant
+      - token
+      - jwt
+      - senha
+      - password
+    patterns:
+      - "criar (usuario|empresa)"
+      - "permiss(ao|oes) .+"
+      - "redefinir senha .+"
+    confidence_per_match: 0.25
+    max_confidence: 0.95
+
+  capture:
+    description: "Eventos, tracking, WebSocket, SDK"
+    keywords:
+      - evento
+      - eventos
+      - tracking
+      - tracker
+      - rastrear
+      - captura
+      - websocket
+      - sdk
+      - pixel
+      - pageview
+      - click
+    patterns:
+      - "rastrear .+"
+      - "capturar evento .+"
+      - "configurar (tracker|sdk|pixel)"
+    confidence_per_match: 0.25
+    max_confidence: 0.95
+
+  integrations:
+    description: "Providers, adapters, Resend, Twilio, Braze"
+    keywords:
+      - integracao
+      - integracoes
+      - provider
+      - resend
+      - twilio
+      - braze
+      - webhook
+      - api
+      - conectar
+      - adapter
+      - email
+      - sms
+    patterns:
+      - "conectar (com|ao) .+"
+      - "configurar (integracao|webhook|provider)"
+      - "status (da|do) (integracao|provider)"
+    confidence_per_match: 0.25
+    max_confidence: 0.95
+
+  platform:
+    description: "Ingestion, workers, filas, infra"
+    keywords:
+      - fila
+      - filas
+      - worker
+      - workers
+      - job
+      - jobs
+      - ingestao
+      - batch
+      - cron
+      - retry
+      - dlq
+      - pipeline
+      - cache
+      - redis
+    patterns:
+      - "status (da|do) (fila|worker|job)"
+      - "reprocessar .+"
+      - "limpar (cache|fila)"
+    confidence_per_match: 0.25
+    max_confidence: 0.95
+
+# Configuracao global
+settings:
+  min_confidence_to_route: 0.7
+  fallback_domain: "platform"
+  fallback_to_layer2: true
+  case_sensitive: false

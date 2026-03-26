@@ -28,6 +28,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRouter
 from pydantic import BaseModel, Field
 
+from src.middleware.triage_middleware import TriageMiddleware
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -339,6 +341,17 @@ class _Services:
 _svc = _Services()
 
 # ---------------------------------------------------------------------------
+# Triage Layer 1
+# ---------------------------------------------------------------------------
+
+try:
+    _triage_mw = TriageMiddleware()
+    logger.info("Sovereign gateway: TriageMiddleware connected")
+except Exception as exc:
+    _triage_mw = None
+    logger.warning("TriageMiddleware unavailable: %s", exc)
+
+# ---------------------------------------------------------------------------
 # WebSocket connection manager
 # ---------------------------------------------------------------------------
 
@@ -477,15 +490,30 @@ async def agent_history(agent_id: str, limit: int = Query(default=20, le=100)):
 @router.post("/tasks")
 async def submit_task(body: TaskSubmission):
     """Submit a task to the Neural Link orchestrator."""
+    context = dict(body.context or {})
+
+    # Layer 1: triage — classifica dominio sem LLM
+    if _triage_mw:
+        triage_result = _triage_mw.classify(body.query)
+        context["domain"] = triage_result.domain
+        context["triage"] = triage_result.to_dict()
+        if not triage_result.routed:
+            context["escalate_to_layer2"] = True
+
     if not _svc.interface:
         return {"answer": "Orchestrator not available", "error": True}
-    result = _svc.interface.process(body.query, context=body.context)
+    result = _svc.interface.process(body.query, context=context)
+
+    # Adicionar info de triage na resposta
+    if _triage_mw and isinstance(result, dict):
+        result["_triage"] = context.get("triage")
 
     # Broadcast flow event if we have subscribers
     if _ws_manager.channel_count("flow-events") > 0:
         await _ws_manager.broadcast("flow-events", {
             "type": "task_submitted",
             "query": body.query,
+            "domain": context.get("domain", "unknown"),
             "result_preview": result.get("answer", "")[:200],
         })
 
@@ -607,6 +635,23 @@ async def cluster_health():
             services={},
             summary={"total": 0, "ok": 0, "fail": 0, "skip": 0},
         )
+
+
+@router.get("/triage/domains")
+async def triage_domains():
+    """List available triage domains and their rules."""
+    if not _triage_mw:
+        return {"status": "unavailable"}
+    return {"domains": _triage_mw.get_domains()}
+
+
+@router.get("/triage/classify")
+async def triage_classify(q: str = Query(..., min_length=1)):
+    """Classify a query by domain (dry-run, does not process)."""
+    if not _triage_mw:
+        return {"status": "unavailable"}
+    result = _triage_mw.classify(q)
+    return result.to_dict()
 
 
 # -- Jitbit Macro -----------------------------------------------------------

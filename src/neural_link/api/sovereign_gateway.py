@@ -28,6 +28,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRouter
 from pydantic import BaseModel, Field
 
+from src.middleware.cache_middleware import CacheMiddleware
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -339,6 +341,17 @@ class _Services:
 _svc = _Services()
 
 # ---------------------------------------------------------------------------
+# Cache Layer 0
+# ---------------------------------------------------------------------------
+
+try:
+    _cache_mw = CacheMiddleware()
+    logger.info("Sovereign gateway: CacheMiddleware connected")
+except Exception as exc:
+    _cache_mw = None
+    logger.warning("CacheMiddleware unavailable: %s", exc)
+
+# ---------------------------------------------------------------------------
 # WebSocket connection manager
 # ---------------------------------------------------------------------------
 
@@ -477,9 +490,22 @@ async def agent_history(agent_id: str, limit: int = Query(default=20, le=100)):
 @router.post("/tasks")
 async def submit_task(body: TaskSubmission):
     """Submit a task to the Neural Link orchestrator."""
+    company_id = (body.context or {}).get("company_id", "default")
+
+    # Layer 0: cache check
+    if _cache_mw:
+        cached = _cache_mw.check(body.query, company_id)
+        if cached:
+            return cached
+
     if not _svc.interface:
         return {"answer": "Orchestrator not available", "error": True}
     result = _svc.interface.process(body.query, context=body.context)
+
+    # Layer 0: cache store
+    if _cache_mw and isinstance(result, dict) and not result.get("error"):
+        domain = (body.context or {}).get("domain", "default")
+        _cache_mw.store(body.query, company_id, result, domain=domain)
 
     # Broadcast flow event if we have subscribers
     if _ws_manager.channel_count("flow-events") > 0:
@@ -508,11 +534,23 @@ async def recent_tasks(limit: int = Query(default=20, le=100)):
 # -- RAG ---------------------------------------------------------------------
 
 @router.get("/rag/search")
-async def rag_search(q: str = Query(..., min_length=1), top_k: int = Query(default=10, le=50)):
+async def rag_search(q: str = Query(..., min_length=1), top_k: int = Query(default=10, le=50), company_id: str = Query(default="default")):
     """Hybrid RAG search across chunks and concepts."""
+    # Layer 0: cache check
+    if _cache_mw:
+        cached = _cache_mw.check(q, company_id)
+        if cached:
+            return cached
+
     if not _svc.interface:
         return []
-    return _svc.interface.search(q, top_k=top_k)
+    result = _svc.interface.search(q, top_k=top_k)
+
+    # Layer 0: cache store
+    if _cache_mw and result:
+        _cache_mw.store(q, company_id, {"results": result}, domain="platform")
+
+    return result
 
 
 # -- Graph -------------------------------------------------------------------
@@ -607,6 +645,14 @@ async def cluster_health():
             services={},
             summary={"total": 0, "ok": 0, "fail": 0, "skip": 0},
         )
+
+
+@router.get("/cache/health")
+async def cache_health():
+    """Cache Layer 0 health and hit rate metrics."""
+    if not _cache_mw:
+        return {"status": "unavailable", "redis_connected": False}
+    return _cache_mw.health()
 
 
 # -- Jitbit Macro -----------------------------------------------------------

@@ -21,7 +21,7 @@ chromadb>=0.4.22
 
 # Graph DB
 neo4j>=5.16.0
-n# Cache
+# Cache
 redis>=5.0.0
 
 # API framework

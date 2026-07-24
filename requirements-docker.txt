@@ -2,7 +2,7 @@
 # Inclui deps para /explain_workflow, ChromaDB, Neo4j, Telegram
 
 # Core
-Pillow==10.2.0
+Pillow==12.3.0
 opencv-python-headless==4.9.0.80
 numpy==1.26.3
 httpx==0.26.0
